@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Admin Stats Dashboard | Engineering Calculator Pro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #0c0e14;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            color: #e8eef2;
+            padding: 24px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* 登录面板 */
+        .login-panel {
+            max-width: 420px;
+            margin: 100px auto;
+            background: linear-gradient(145deg, #1a1f2e, #0f1222);
+            border-radius: 24px;
+            padding: 32px;
+            border: 1px solid #ffd700;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+        .login-panel h2 {
+            color: #ffd700;
+            margin-bottom: 24px;
+            font-size: 24px;
+        }
+        .login-panel input {
+            width: 100%;
+            padding: 14px 18px;
+            background: #0a0c14;
+            border: 1px solid #2a2e3c;
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        .login-panel input:focus {
+            outline: none;
+            border-color: #ffd700;
+        }
+        .login-btn {
+            width: 100%;
+            background: linear-gradient(95deg, #ffd700, #ff8c00);
+            border: none;
+            padding: 12px;
+            border-radius: 40px;
+            font-weight: bold;
+            color: #1c1b1a;
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+        .login-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+        }
+        .login-error {
+            color: #ff6b6b;
+            margin-top: 12px;
+            font-size: 13px;
+        }
+        
+        /* 主内容区 */
+        .dashboard {
+            display: none;
+        }
+        
+        /* 头部 */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+            gap: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #2a2e3c;
+        }
+        .header h1 {
+            font-size: 24px;
+            background: linear-gradient(135deg, #ffd700, #ff8c00);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .refresh-btn {
+            background: #1f2533;
+            border: 1px solid #2a2e3c;
+            padding: 8px 20px;
+            border-radius: 30px;
+            color: #4fc3f7;
+            cursor: pointer;
+            font-size: 14px;
+            transition: 0.3s;
+        }
+        .refresh-btn:hover {
+            background: #2d3748;
+            color: #ffd700;
+        }
+        .last-update {
+            font-size: 12px;
+            color: #8e9aaf;
+        }
+        
+        /* 统计卡片网格 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+        .stat-card {
+            background: linear-gradient(145deg, #181c26, #12151e);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid #2a2e3c;
+            text-align: center;
+            transition: 0.2s;
+        }
+        .stat-card:hover {
+            border-color: #ffd700;
+        }
+        .stat-label {
+            font-size: 13px;
+            color: #8e9aaf;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+        .stat-unit {
+            font-size: 12px;
+            color: #8e9aaf;
+            margin-left: 4px;
+        }
+        
+        /* 双栏布局 */
+        .two-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        @media (max-width: 900px) {
+            .two-columns {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .chart-card {
+            background: linear-gradient(145deg, #181c26, #12151e);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid #2a2e3c;
+        }
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #2a2e3c;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .peak-badge {
+            background: #ffd70020;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            color: #ffd700;
+        }
+        
+        /* 小时分布条形图 */
+        .hour-bars {
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+        .hour-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 11px;
+            gap: 10px;
+        }
+        .hour-label {
+            width: 60px;
+            color: #8e9aaf;
+        }
+        .bar-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .bar-visit {
+            height: 24px;
+            background: linear-gradient(90deg, #1e88e5, #4fc3f7);
+            border-radius: 4px;
+            min-width: 4px;
+            transition: width 0.3s;
+        }
+        .bar-paid {
+            height: 24px;
+            background: linear-gradient(90deg, #ffd700, #ff8c00);
+            border-radius: 4px;
+            min-width: 4px;
+        }
+        .bar-value {
+            width: 50px;
+            text-align: right;
+            color: #b0bec5;
+            font-size: 11px;
+        }
+        
+        /* 每日表格 */
+        .daily-table-wrapper {
+            overflow-x: auto;
+        }
+        .daily-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .daily-table th,
+        .daily-table td {
+            padding: 12px 8px;
+            text-align: center;
+            border-bottom: 1px solid #2a2e3c;
+        }
+        .daily-table th {
+            color: #ffd700;
+            font-weight: 600;
+            background: #0f1222;
+        }
+        .daily-table tr:hover {
+            background: #1a1f2e;
+        }
+        
+        /* 说明区域 */
+        .info-note {
+            margin-top: 32px;
+            padding: 16px 20px;
+            background: #0a0c14;
+            border-radius: 16px;
+            border-left: 3px solid #ffd700;
+            font-size: 12px;
+            color: #8e9aaf;
+            line-height: 1.5;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #8e9aaf;
+        }
+        
+        footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 11px;
+            color: #4d5a6e;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- 登录面板 -->
+    <div id="loginPanel" class="login-panel">
+        <h2>🔐 Admin Access</h2>
+        <input type="password" id="adminPassword" placeholder="Enter password" autocomplete="off">
+        <button class="login-btn" id="loginBtn">Login</button>
+        <div id="loginError" class="login-error"></div>
+    </div>
+    
+    <!-- 主看板 -->
+    <div id="dashboard" class="dashboard">
+        <div class="header">
+            <h1>📊 Engineering Calculator Pro · Stats Dashboard</h1>
+            <div>
+                <button class="refresh-btn" id="refreshBtn">🔄 Refresh Data</button>
+                <span class="last-update" id="lastUpdateTime"></span>
+            </div>
+        </div>
+        
+        <!-- 核心指标卡片 -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card"><div class="stat-label">📄 Total Page Views</div><div class="stat-value" id="totalPageViews">-</div></div>
+            <div class="stat-card"><div class="stat-label">🪟 Popup Clicks</div><div class="stat-value" id="totalPopupClicks">-</div></div>
+            <div class="stat-card"><div class="stat-label">🔗 Pay Link Clicks</div><div class="stat-value" id="totalPayLinkClicks">-</div></div>
+            <div class="stat-card"><div class="stat-label">⚡ Activate Clicks</div><div class="stat-value" id="totalActivateClicks">-</div></div>
+            <div class="stat-card"><div class="stat-label">👥 Paid Users</div><div class="stat-value" id="totalPaidCount">-</div></div>
+            <div class="stat-card"><div class="stat-label">💰 Total Revenue</div><div class="stat-value" id="totalRevenue">-</div><span class="stat-unit">USD</span></div>
+        </div>
+        
+        <!-- 时段分析双栏 -->
+        <div class="two-columns">
+            <!-- 访问分布 -->
+            <div class="chart-card">
+                <div class="chart-title">
+                    <span>📈 Visit Distribution (Last 24h)</span>
+                    <span class="peak-badge" id="visitPeakBadge">-</span>
+                </div>
+                <div class="hour-bars" id="visitHourBars">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+            <!-- 付费分布 -->
+            <div class="chart-card">
+                <div class="chart-title">
+                    <span>💰 Payment Distribution (Last 24h)</span>
+                    <span class="peak-badge" id="paymentPeakBadge">-</span>
+                </div>
+                <div class="hour-bars" id="paymentHourBars">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 每日汇总表 -->
+        <div class="chart-card">
+            <div class="chart-title">📅 Daily Summary (Newest First)</div>
+            <div class="daily-table-wrapper">
+                <table class="daily-table" id="dailyTable">
+                    <thead>
+                        <tr><th>Date</th><th>Page Views</th><th>Paid Users</th><th>Revenue (USD)</th><th>Total Events</th></tr>
+                    </thead>
+                    <tbody id="dailyTableBody">
+                        <tr><td colspan="5" class="loading">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- 说明区域 -->
+        <div class="info-note">
+            📌 <strong>Data Description</strong><br>
+            • <strong>Page Views:</strong> Total number of page loads (including homepage and calculator pages).<br>
+            • <strong>Popup Clicks:</strong> Number of times the "Upgrade to PRO" popup was opened.<br>
+            • <strong>Pay Link Clicks:</strong> Number of clicks on the PayPal payment link.<br>
+            • <strong>Activate Clicks:</strong> Number of clicks on the "I have paid, Activate PRO" button.<br>
+            • <strong>Paid Users:</strong> Number of unique email addresses that completed payment.<br>
+            • <strong>Revenue:</strong> Total amount from successful payments ($4.99 per license).<br>
+            • <strong>Hourly data:</strong> Only displays the last 24 hours. Peak hours are highlighted.
+        </div>
+        <footer>© 2025 Overseas Engineering Calculator Pro · Admin Dashboard</footer>
+    </div>
+</div>
+
+<script>
+    // ========== 固定访问密码（请修改为您自己的密码）==========
+    const ADMIN_PASSWORD = 'Zkx0103wd...';  // ⚠️ 请修改此密码
+    
+    // 统计接口地址
+    const STATS_API_URL = 'paypal-callback.php?action=get_stats';
+    
+    // 登录状态管理
+    let isLoggedIn = false;
+    
+    // DOM 元素
+    const loginPanel = document.getElementById('loginPanel');
+    const dashboard = document.getElementById('dashboard');
+    const loginBtn = document.getElementById('loginBtn');
+    const adminPassword = document.getElementById('adminPassword');
+    const loginError = document.getElementById('loginError');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const lastUpdateSpan = document.getElementById('lastUpdateTime');
+    
+    // ========== 登录逻辑 ==========
+    function checkLoginStatus() {
+        const loggedIn = sessionStorage.getItem('stats_admin_logged_in');
+        if (loggedIn === 'true') {
+            isLoggedIn = true;
+            loginPanel.style.display = 'none';
+            dashboard.style.display = 'block';
+            loadStatsData();
+        } else {
+            loginPanel.style.display = 'block';
+            dashboard.style.display = 'none';
+        }
+    }
+    
+    function doLogin() {
+        const pwd = adminPassword.value.trim();
+        if (pwd === ADMIN_PASSWORD) {
+            sessionStorage.setItem('stats_admin_logged_in', 'true');
+            isLoggedIn = true;
+            loginError.textContent = '';
+            loginPanel.style.display = 'none';
+            dashboard.style.display = 'block';
+            loadStatsData();
+        } else {
+            loginError.textContent = '❌ Incorrect password. Access denied.';
+            adminPassword.value = '';
+            adminPassword.focus();
+        }
+    }
+    
+    loginBtn.addEventListener('click', doLogin);
+    adminPassword.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') doLogin();
+    });
+    
+    // ========== 格式化数字 ==========
+    function formatNumber(num) {
+        if (num === undefined || num === null) return '0';
+        return num.toLocaleString();
+    }
+    
+    function formatCurrency(amount) {
+        if (amount === undefined || amount === null) return '0.00';
+        return amount.toFixed(2);
+    }
+    
+    // ========== 加载统计数据 ==========
+    async function loadStatsData() {
+        try {
+            const response = await fetch(STATS_API_URL);
+            const result = await response.json();
+            
+            if (result.success && result.data) {
+                renderDashboard(result.data);
+                updateLastUpdateTime();
+            } else {
+                console.error('Failed to load stats:', result);
+                showErrorInDashboard('Failed to load data. Please check backend.');
+            }
+        } catch (err) {
+            console.error('Fetch error:', err);
+            showErrorInDashboard('Network error. Please check connection.');
+        }
+    }
+    
+    function showErrorInDashboard(message) {
+        const loadingElements = document.querySelectorAll('#dailyTableBody, #visitHourBars, #paymentHourBars');
+        loadingElements.forEach(el => {
+            if (el) el.innerHTML = `<div class="loading">⚠️ ${message}</div>`;
+        });
+    }
+    
+    function updateLastUpdateTime() {
+        const now = new Date();
+        lastUpdateSpan.textContent = `Last updated: ${now.toLocaleString()}`;
+    }
+    
+    // ========== 渲染看板 ==========
+    function renderDashboard(data) {
+        const summary = data.summary || {};
+        const daily = data.daily || [];
+        const hourly = data.hourly || {};
+        const hourlyPaid = data.hourly_paid || {};
+        
+        // 1. 核心指标卡片
+        document.getElementById('totalPageViews').textContent = formatNumber(summary.total_page_views || 0);
+        document.getElementById('totalPopupClicks').textContent = formatNumber(summary.total_popup_clicks || 0);
+        document.getElementById('totalPayLinkClicks').textContent = formatNumber(summary.total_pay_link_clicks || 0);
+        document.getElementById('totalActivateClicks').textContent = formatNumber(summary.total_activate_clicks || 0);
+        document.getElementById('totalPaidCount').textContent = formatNumber(summary.total_paid_count || 0);
+        document.getElementById('totalRevenue').textContent = formatCurrency(summary.total_revenue || 0);
+        
+        // 2. 小时分布（最近24小时）
+        renderHourDistribution(hourly, hourlyPaid);
+        
+        // 3. 每日汇总表（倒序）
+        renderDailyTable(daily);
+    }
+    
+    // 渲染小时分布图
+    function renderHourDistribution(hourly, hourlyPaid) {
+        // 获取最近24小时的时间点（整点）
+        const hours24 = [];
+        const now = new Date();
+        for (let i = 23; i >= 0; i--) {
+            const d = new Date(now);
+            d.setHours(now.getHours() - i, 0, 0, 0);
+            const hourKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:00:00`;
+            hours24.push({ key: hourKey, hour: d.getHours(), dateStr: hourKey });
+        }
+        
+        // 提取访问数据
+        const visitData = [];
+        const paidData = [];
+        let maxVisit = 0;
+        let maxPaid = 0;
+        
+        for (let item of hours24) {
+            const visitCount = (hourly[item.key] && hourly[item.key].page_view) || 0;
+            const paidCount = (hourlyPaid[item.key] && hourlyPaid[item.key].count) || 0;
+            visitData.push({ hour: item.hour, count: visitCount });
+            paidData.push({ hour: item.hour, count: paidCount });
+            if (visitCount > maxVisit) maxVisit = visitCount;
+            if (paidCount > maxPaid) maxPaid = paidCount;
+        }
+        
+        // 找出访问高峰时段
+        let visitPeakHour = '';
+        let visitPeakValue = 0;
+        for (let d of visitData) {
+            if (d.count > visitPeakValue) {
+                visitPeakValue = d.count;
+                visitPeakHour = `${d.hour}:00`;
+            }
+        }
+        document.getElementById('visitPeakBadge').innerHTML = visitPeakValue > 0 ? `🔺 Peak: ${visitPeakHour} (${visitPeakValue} visits)` : 'No data';
+        
+        // 找出付费高峰时段
+        let paidPeakHour = '';
+        let paidPeakValue = 0;
+        for (let d of paidData) {
+            if (d.count > paidPeakValue) {
+                paidPeakValue = d.count;
+                paidPeakHour = `${d.hour}:00`;
+            }
+        }
+        document.getElementById('paymentPeakBadge').innerHTML = paidPeakValue > 0 ? `💰 Peak: ${paidPeakHour} (${paidPeakValue} payments)` : 'No data';
+        
+        // 渲染访问条形图
+        const visitContainer = document.getElementById('visitHourBars');
+        if (visitContainer) {
+            visitContainer.innerHTML = '';
+            for (let i = 0; i < visitData.length; i++) {
+                const d = visitData[i];
+                const percent = maxVisit > 0 ? (d.count / maxVisit) * 100 : 0;
+                visitContainer.innerHTML += `
+                    <div class="hour-row">
+                        <div class="hour-label">${String(d.hour).padStart(2,'0')}:00</div>
+                        <div class="bar-container">
+                            <div class="bar-visit" style="width: ${percent}%;"></div>
+                            <div class="bar-value">${d.count}</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // 渲染付费条形图
+        const paidContainer = document.getElementById('paymentHourBars');
+        if (paidContainer) {
+            paidContainer.innerHTML = '';
+            for (let i = 0; i < paidData.length; i++) {
+                const d = paidData[i];
+                const percent = maxPaid > 0 ? (d.count / maxPaid) * 100 : 0;
+                paidContainer.innerHTML += `
+                    <div class="hour-row">
+                        <div class="hour-label">${String(d.hour).padStart(2,'0')}:00</div>
+                        <div class="bar-container">
+                            <div class="bar-paid" style="width: ${percent}%;"></div>
+                            <div class="bar-value">${d.count}</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    }
+    
+    // 渲染每日汇总表
+    function renderDailyTable(daily) {
+        const tbody = document.getElementById('dailyTableBody');
+        if (!tbody) return;
+        
+        // 按日期倒序排序
+        const sorted = [...daily].sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        if (sorted.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="loading">No daily data available</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = '';
+        for (let day of sorted) {
+            const totalEvents = (day.page_views || 0) + (day.popup_clicks || 0) + (day.pay_link_clicks || 0) + (day.activate_clicks || 0);
+            const row = `
+                <tr>
+                    <td>${day.date}</td>
+                    <td>${formatNumber(day.page_views || 0)}</td>
+                    <td>${formatNumber(day.paid_count || 0)}</td>
+                    <td>$${formatCurrency(day.revenue || 0)}</td>
+                    <td>${formatNumber(totalEvents)}</td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        }
+    }
+    
+    // 手动刷新
+    refreshBtn.addEventListener('click', function() {
+        refreshBtn.textContent = '🔄 Loading...';
+        refreshBtn.disabled = true;
+        loadStatsData().finally(() => {
+            refreshBtn.textContent = '🔄 Refresh Data';
+            refreshBtn.disabled = false;
+        });
+    });
+    
+    // 检查登录状态
+    checkLoginStatus();
+</script>
+</body>
+</html>

@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>海外工程计算器专业版</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --metal-dark: #0c0e14;
+            --metal-card: #14161e;
+            --metal-border: #2a2e3c;
+            --metal-border-light: #3a3f50;
+            --primary: #1e88e5;
+            --primary-dark: #0d5e8a;
+            --primary-glow: rgba(30, 136, 229, 0.4);
+            --text-main: #e8eef2;
+            --text-sub: #8e9aaf;
+            --pro-grad: linear-gradient(145deg, #d4af37, #b8860b);
+        }
+        body {
+            background: var(--metal-dark);
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            color: var(--text-main);
+            background-image: repeating-linear-gradient(45deg, rgba(255,255,240,0.01) 0px, rgba(255,255,240,0.01) 2px, transparent 2px, transparent 8px);
+        }
+        .app-layout { display: flex; min-height: 100vh; width: 100%; }
+        .sidebar { width: 260px; background: linear-gradient(135deg, #0b0d12 0%, #11141c 100%); border-right: 1px solid var(--metal-border); padding: 24px 12px; flex-shrink: 0; box-shadow: 8px 0 20px rgba(0,0,0,0.5); }
+        .logo-area { margin-bottom: 32px; padding: 8px 12px; border-bottom: 1px solid var(--metal-border-light); }
+        .logo-icon { font-size: 32px; filter: drop-shadow(0 0 4px var(--primary-glow)); }
+        .logo-text { font-size: 18px; font-weight: 700; background: linear-gradient(135deg, #d4d9e6, var(--primary)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .logo-sub { font-size: 10px; color: var(--text-sub); margin-top: 4px; }
+        .nav-menu { display: flex; flex-direction: column; gap: 6px; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 12px; background: transparent; border: none; color: var(--text-sub); font-size: 14px; font-weight: 500; cursor: pointer; width: 100%; text-align: left; }
+        .nav-item.active { background: linear-gradient(95deg, rgba(30,136,229,0.2), rgba(13,94,138,0.3)); border-left: 3px solid var(--primary); color: white; }
+        .nav-item:hover:not(.active) { background: rgba(42,46,60,0.7); color: var(--text-main); }
+        .main-content { flex: 1; padding: 20px 28px; overflow-y: auto; }
+        .top-bar { display: flex; justify-content: flex-end; gap: 16px; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--metal-border); flex-wrap: wrap; align-items: center; }
+        .lang-select, .pro-badge, .upgrade-btn { background: var(--metal-card); border: 1px solid var(--metal-border); border-radius: 30px; padding: 6px 16px; color: white; cursor: pointer; font-size: 13px; }
+        .pro-badge, .upgrade-btn { background: var(--pro-grad); color: #1c1b1a; font-weight: 700; border: none; }
+        .upgrade-btn { background: linear-gradient(95deg, #f5b042, #e68a2e); margin-right: 6px; }
+        .ad-placeholder { background: rgba(20,22,30,0.6); border-radius: 20px; margin-bottom: 24px; min-height: 70px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #57606f; border: 1px dashed var(--metal-border); }
+        .calc-card { background: linear-gradient(145deg, #181c26, #12151e); border-radius: 24px; padding: 24px; margin-bottom: 24px; border: 1px solid var(--metal-border-light); box-shadow: 8px 8px 16px rgba(0,0,0,0.5), inset 1px 1px 0 rgba(255,255,255,0.03); }
+        .section-title { font-size: 18px; font-weight: 600; margin-bottom: 20px; border-left: 3px solid var(--primary); padding-left: 14px; color: #ccddee; }
+        .type-buttons-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+        .type-btn { background: #0f111a; border: 1px solid var(--metal-border); padding: 8px 18px; border-radius: 40px; color: var(--text-sub); font-size: 12px; cursor: pointer; }
+        .type-btn.active { background: var(--primary); border-color: var(--primary); color: white; box-shadow: 0 0 8px var(--primary-glow); }
+        .input-group { margin-bottom: 18px; }
+        label { font-size: 12px; font-weight: 600; margin-bottom: 6px; display: block; color: var(--text-sub); }
+        input, select, textarea { width: 100%; padding: 12px 16px; border-radius: 16px; background: #0a0c14; border: 1px solid var(--metal-border); color: white; font-size: 14px; }
+        input:focus, select:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 2px var(--primary-glow); }
+        .result-box { background: #06080e; border-radius: 24px; padding: 16px 20px; margin: 18px 0; text-align: center; font-family: monospace; font-weight: 600; font-size: 16px; color: #5bc0ff; border: 1px solid var(--primary-glow); }
+        .action-btn { background: linear-gradient(95deg, #1a4d6e, #0d2e42); border: none; padding: 12px; border-radius: 40px; font-weight: 700; color: white; cursor: pointer; width: 100%; margin-top: 12px; }
+        .action-btn.disabled, .action-btn:disabled { opacity: 0.5; cursor: not-allowed; background: linear-gradient(95deg, #2d3748, #1a1f2e); }
+        .small-btn { background: #1f2533; border: 1px solid var(--metal-border); padding: 6px 14px; border-radius: 30px; color: var(--primary); font-size: 12px; cursor: pointer; margin-right: 8px; margin-bottom: 8px; }
+        .data-table { width: 100%; font-size: 12px; border-collapse: collapse; background: #0a0c14; border-radius: 16px; overflow: hidden; margin: 12px 0; }
+        .data-table th, .data-table td { border: 1px solid #252b38; padding: 8px 6px; text-align: center; }
+        .data-table th { background: #141820; color: #facc15; }
+        .grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .grid-3col { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+        .history-item { background: #0c0f18; border-radius: 16px; padding: 10px 14px; margin-bottom: 8px; font-size: 12px; border-left: 4px solid var(--primary); font-family: monospace; }
+        
+        .footer-links {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 11px;
+            color: #4d5a6e;
+            border-top: 1px solid var(--metal-border);
+            padding-top: 20px;
+        }
+        .footer-links a {
+            color: #8e9aaf;
+            text-decoration: none;
+            margin: 0 12px;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+        .footer-links a:hover {
+            color: #4fc3f7;
+            text-decoration: underline;
+        }
+        .footer-links .separator {
+            color: #2d3748;
+        }
+        
+        .panel { display: none; }
+        .panel.active { display: block; }
+        .pro-locked { filter: blur(3px); pointer-events: none; opacity: 0.5; user-select: none; }
+        .pro-banner { background: #2a2416; padding: 12px; border-radius: 20px; text-align: center; margin: 16px 0; color: #ffd966; }
+        
+        /* 支付弹窗样式 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: linear-gradient(145deg, #1a1f2e, #0f1222);
+            border-radius: 24px;
+            padding: 28px;
+            max-width: 480px;
+            width: 90%;
+            border: 1px solid #ffd700;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            animation: modalFadeIn 0.3s ease;
+        }
+        .legal-modal-content {
+            max-width: 550px;
+        }
+        .legal-content {
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 15px 0;
+            padding-right: 10px;
+        }
+        .legal-content h4 {
+            color: #ffd700;
+            margin: 15px 0 8px 0;
+            font-size: 14px;
+        }
+        .legal-content p {
+            font-size: 12px;
+            line-height: 1.6;
+            color: #b0bec5;
+            margin-bottom: 10px;
+        }
+        .legal-content .zh-hint {
+            color: #888;
+            font-size: 11px;
+            border-left: 2px solid #ffd700;
+            padding-left: 10px;
+            margin: 10px 0;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-content h2 { color: #ffd700; text-align: center; margin-bottom: 20px; font-size: 22px; }
+        .modal-content .product-info { text-align: center; margin-bottom: 20px; padding: 12px; background: rgba(255, 215, 0, 0.1); border-radius: 12px; }
+        .modal-content .product-price { font-size: 28px; font-weight: bold; color: #ffd700; }
+        .modal-content .input-group { margin-bottom: 20px; }
+        .modal-content input { background: #0a0c14; border: 1px solid var(--metal-border); color: white; width: 100%; padding: 12px; border-radius: 12px; font-size: 14px; }
+        .modal-content input:focus { outline: none; border-color: #ffd700; }
+        .modal-content .email-hint { font-size: 11px; color: #888; margin-top: 5px; text-align: center; }
+        
+        /* 付款按钮样式 */
+        .pay-link-btn {
+            display: block;
+            width: 100%;
+            background: linear-gradient(95deg, #ffd700, #ff8c00);
+            color: #1c1b1a;
+            text-align: center;
+            padding: 14px;
+            border-radius: 40px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 16px;
+            margin: 20px 0;
+            transition: 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+        .pay-link-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+        }
+        .pay-link-btn.loading {
+            opacity: 0.6;
+            cursor: wait;
+            pointer-events: none;
+        }
+        .activate-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #2d3748;
+            text-align: center;
+        }
+        .manual-activate-btn {
+            background: linear-gradient(95deg, #4caf50, #2e7d32);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 30px;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 10px;
+            transition: 0.3s;
+        }
+        .manual-activate-btn:hover {
+            transform: scale(1.02);
+        }
+        .manual-activate-btn.loading {
+            opacity: 0.6;
+            cursor: wait;
+            pointer-events: none;
+        }
+        .close-modal { width: 100%; padding: 12px; background: #2d3748; border: none; border-radius: 12px; color: #fff; cursor: pointer; margin-top: 15px; transition: 0.3s; }
+        .close-modal:hover { background: #ff4444; }
+        
+        /* 提示消息样式 */
+        .toast-message {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-size: 14px;
+            z-index: 3000;
+            animation: fadeInOut 3s ease forwards;
+            pointer-events: none;
+            text-align: center;
+            max-width: 80%;
+        }
+        .toast-message.success { background: rgba(76, 175, 80, 0.95); }
+        .toast-message.error { background: rgba(244, 67, 54, 0.95); }
+        .toast-message.warning { background: rgba(255, 152, 0, 0.95); }
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            85% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-20px); visibility: hidden; }
+        }
+        
+        .auto-activate-banner {
+            background: linear-gradient(95deg, #4caf50, #2e7d32);
+            padding: 12px 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: bold;
+            animation: slideDown 0.5s ease;
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .admin-btn { display: none; }
+        
+        /* 操作步骤样式 */
+        .steps-container {
+            background: rgba(79, 195, 247, 0.1);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        .step-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .step-num {
+            width: 22px;
+            height: 22px;
+            background: #ffd700;
+            color: #1c1b1a;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .step-text { flex: 1; }
+        
+        /* 无痕模式提示条 */
+        .storage-warning {
+            background: rgba(255, 152, 0, 0.2);
+            border: 1px solid #ff9800;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 15px;
+            font-size: 12px;
+            text-align: center;
+            display: none;
+        }
+        
+        @media (max-width: 768px) { .app-layout { flex-direction: column; } .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--metal-border); padding: 12px; } .nav-menu { flex-direction: row; flex-wrap: wrap; justify-content: center; } .nav-item { width: auto; padding: 6px 12px; } .main-content { padding: 16px; } .grid-2col, .grid-3col { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="app-layout">
+    <div class="sidebar">
+        <div class="logo-area"><div class="logo-icon">🌍</div><div class="logo-text" id="logoText"></div><div class="logo-sub" id="logoSub"></div></div>
+        <div class="nav-menu" id="navMenu"></div>
+    </div>
+    <div class="main-content">
+        <div class="top-bar">
+            <select class="lang-select" id="langSelector">
+                <option value="zh" selected>🇨🇳 中文</option>
+                <option value="en">🇬🇧 English</option>
+                <option value="es">🇪🇸 Español</option>
+                <option value="fr">🇫🇷 Français</option>
+                <option value="de">🇩🇪 Deutsch</option>
+                <option value="ru">🇷🇺 Русский</option>
+                <option value="pt">🇵🇹 Português</option>
+                <option value="ar">🇸🇦 العربية</option>
+            </select>
+            <button class="upgrade-btn" id="upgradeBtn"></button>
+            <div class="pro-badge" id="proBadge"></div>
+        </div>
+        <div id="adContainer" class="ad-placeholder"></div>
+        <div id="autoActivateMsg" class="auto-activate-banner" style="display: none;"></div>
+        <!-- ========== 加固点5: 无痕模式兼容提示 ========== -->
+        <div id="storageWarning" class="storage-warning"></div>
+        <div id="convertPanel" class="panel active"></div>
+        <div id="pipePanel" class="panel"></div>
+        <div id="civilPanel" class="panel"></div>
+        <div id="steelPanel" class="panel"></div>
+        <div id="cablePanel" class="panel"></div>
+        <div id="flangePanel" class="panel"></div>
+        <div id="ductPanel" class="panel"></div>
+        <div id="paintPanel" class="panel"></div>
+        <div id="visaPanel" class="panel"></div>
+        <div id="historyPanel" class="panel"></div>
+        
+        <div class="footer-links">
+            <a id="privacyLink">Privacy Policy</a>
+            <span class="separator">|</span>
+            <a id="termsLink">Terms of Service</a>
+        </div>
+        <footer id="footerText"></footer>
+    </div>
+</div>
+
+<!-- 支付弹窗 - 动态内容由JS根据语言生成 -->
+<div class="modal-overlay" id="paymentModal">
+    <div class="modal-content" id="paymentModalContent"></div>
+</div>
+
+<!-- 合规弹窗 -->
+<div class="modal-overlay" id="legalModal">
+    <div class="modal-content legal-modal-content" id="legalModalContent"></div>
+</div>
+
+<button class="admin-btn" id="adminUnlockBtn">🔐 Admin Unlock</button>
+
+<script>
+(function(){
+    const { jsPDF } = window.jspdf;
+    
+    // ========== ========== ========== ========== ==========
+    // ========== 新增：前端统计上报模块 ==========
+    // ========== ========== ========== ========== ==========
+    const StatReporter = {
+        // 上报地址
+        reportUrl: 'paypal-callback.php?action=stat',
+        // 是否已上报页面浏览（防止重复）
+        pageViewReported: false,
+        
+        // 通用上报方法（异步，失败不阻塞）
+        send: function(eventName) {
+            try {
+                // 使用 sendBeacon 优先（页面关闭时也能发送），降级到 fetch
+                const data = JSON.stringify({ event: eventName });
+                if (navigator.sendBeacon) {
+                    navigator.sendBeacon(this.reportUrl, data);
+                } else {
+                    fetch(this.reportUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: data,
+                        // 失败不阻塞主流程
+                        keepalive: true
+                    }).catch(err => console.debug('[Stat] report failed:', err));
+                }
+                console.debug(`[Stat] ${eventName} reported`);
+            } catch (e) {
+                // 静默失败，不影响业务
+                console.debug('[Stat] report error:', e);
+            }
+        },
+        
+        // 页面浏览上报
+        reportPageView: function() {
+            if (!this.pageViewReported) {
+                this.pageViewReported = true;
+                this.send('page_view');
+            }
+        },
+        
+        // 付费弹窗打开上报
+        reportPopupClick: function() {
+            this.send('popup_click');
+        },
+        
+        // 付款链接点击上报
+        reportPayLinkClick: function() {
+            this.send('pay_link_click');
+        },
+        
+        // 激活按钮点击上报
+        reportActivateClick: function() {
+            this.send('activate_click');
+        }
+    };
+    // ========== 统计模块结束 ==========
+    
+    // ========== 多语言数据 ==========
+    const langData = {
+        zh: {
+            appName:"海外工程计算器专业版", appSub:"工业金属·海外工程工具", footer:"© 2025 | 永久授权 · 一次性$4.99",
+            proBadgeFree:"⭐ 免费版", proBadgeActive:"⭐ 专业版已激活", upgradeBtn:"⭐ 购买专业版 $4.99",
+            navConvert:"单位换算", navPipe:"管道+壁厚", navCivil:"土建工程", navSteel:"型材重量", navCable:"电缆截面",
+            navFlange:"法兰/螺栓", navDuct:"风管阻力", navPaint:"涂料用量", navVisa:"工程签证单", navHistory:"历史记录",
+            inputVal:"输入数值", srcUnit:"原单位", dstUnit:"目标单位", result:"计算结果", exportPDF:"导出PDF",
+            pipeOD:"管道外径(毫米)", pipeLen:"管道长度(米)", insThick:"保温层厚度(毫米)", pipePaint:"刷油面积", pipeIns:"保温面积",
+            civilL:"长度(米)", civilW:"宽度(米)", civilH:"高度(米)", civilArea:"建筑面积", civilWall:"墙体面积", civilConcrete:"混凝土方量", civilEarth:"土方工程量",
+            steelAngle:"等边角钢", steelChannel:"槽钢", steelIbeam:"工字钢", steelRound:"圆钢", steelSquare:"方钢", steelSpec:"规格参数", calcBtn:"计算重量",
+            awg:"线规(AWG)", mm2:"平方毫米", diam:"导体直径(毫米)",
+            flangeThick:"法兰厚度(毫米)", gasketThick:"垫片厚度(毫米)", boltResult:"螺栓长度",
+            ductDia:"管径(毫米)", ductFlow:"流量(立方米/小时)", ductLen:"管道长度(米)", ductRes:"沿程阻力",
+            paintArea:"表面积(平方米)", coverage:"涂布率 (㎡/升)", coats:"涂装层数", paintResult:"涂料用量(升)",
+            visaProject:"项目名称", visaCompany:"公司名称", visaApplicant:"申请人", visaDate:"日期", visaContent:"计算内容", visaRemarks:"备注说明", syncBtn:"同步计算结果", generatePDF:"生成签证单PDF (专业版)",
+            historyTitle:"历史记录 (免费版最多5条)", proMsg:"⭐ 升级专业版 $4.99: 无限记录+ANSI+H型钢+去广告+导出签证单",
+            btnLength:"长度", btnWeight:"重量", btnArea:"面积", btnVolume:"体积", btnTemp:"温度", btnFlow:"流量", btnPipeSize:"管径", btnSteel:"钢材",
+            tempC:"摄氏度", tempF:"华氏度", tempK:"开尔文",
+            thDN:"公称直径", thOD:"外径(毫米)", thThick:"壁厚(毫米)", thWeight:"理论重量(千克/米)",
+            thANSI:"美标规格", thSch40:"Sch40壁厚", thSch80:"Sch80壁厚",
+            gbTitle:"国标钢管壁厚 (GB/T 8163)", ansiTitle:"美标ANSI管道 (专业版)",
+            steelPremiumTitle:"🔒 高级型材库 (专业版)", flangeTitle:"法兰压力等级对照表", flangeANSI:"美标", flangeDIN:"德标", flangeBar:"压力(bar)",
+            ductTitle:"💨 风管/水管阻力计算", ductCalcBtn:"开始计算",
+            paintTitle:"🎨 涂料用量计算", paintCalcBtn:"开始计算", paintSyncBtn:"📌 同步管道面积",
+            cableTitle:"🔌 线缆线规/截面积换算", cableConvertBtn:"⟳ 开始换算", cableCalcAreaBtn:"计算截面积",
+            visaTitle:"📄 工程签证单", visaGenerateBtn:"生成签证单PDF (专业版)", historyEmpty:"暂无计算记录", adText:"📢 广告位 - 升级专业版 $4.99 去除广告",
+            hbeamLabel:"H型钢规格", hbeamBtn:"计算H型钢", upgradeToPro:"购买专业版 $4.99",
+            autoActivateMsg:"🎉 专业版已激活！",
+            proFeatureRequired:"⚠️ 此功能需要专业版。点击「购买专业版」解锁。",
+            pleaseEnterEmail:"请填写邮箱地址",
+            invalidEmail:"请输入有效的邮箱地址（例如：name@example.com）",
+            alreadyActivated:"您已经激活了专业版",
+            activateSuccess:"专业版激活成功！页面即将刷新",
+            activateFailed:"激活失败，请稍后重试",
+            networkError:"网络连接异常，请检查网络后重试",
+            paymentSuccess:"支付完成！请点击下方按钮激活专业版",
+            modalTitle:"升级专业版",
+            productName:"海外工程计算器专业版授权",
+            emailLabel:"📧 邮箱地址（授权将绑定到此邮箱）",
+            emailPlaceholder:"your@email.com",
+            emailHint:"请填写您的邮箱地址，用于绑定授权",
+            payButton:"立即支付 $4.99 美元",
+            stepTitle:"操作步骤：",
+            step1:"填写邮箱",
+            step1Desc:"填写您的邮箱地址",
+            step2:"跳转付款",
+            step2Desc:"点击上方按钮前往 PayPal 完成支付",
+            step3:"返回激活",
+            step3Desc:"支付成功后返回本页面，点击激活按钮",
+            stepDone:"完成以上三步，即可解锁全部专业功能",
+            activateHint:"支付完成后，请点击下方按钮激活",
+            activateBtn:"我已支付，点击激活专业版",
+            helpText:"遇到问题？请联系客服：",
+            closeBtn:"关闭",
+            payingBtn:"跳转中...",
+            activatingBtn:"激活中...",
+            privacyTitle:"隐私政策",
+            termsTitle:"服务条款",
+            privacyContentEN:"We collect only your email address for license delivery and verification. No personal data is shared with third parties. Cookies are used solely for remembering your language preference and PRO status. You may request data deletion at any time.",
+            privacyContentZH:"我们仅收集您的邮箱地址用于授权交付和验证。不会与第三方共享任何个人数据。Cookies仅用于记住您的语言偏好和专业版状态。您可以随时请求删除数据。",
+            termsContentEN:"This software is provided 'as is' without warranties. The license is non-transferable and grants lifetime access to PRO features. We reserve the right to update these terms. By purchasing, you agree to these terms.",
+            termsContentZH:"本软件按“现状”提供，不提供任何保证。授权不可转让，授予专业版功能的终身访问权限。我们保留更新这些条款的权利。购买即表示您同意这些条款。",
+            storageWarningTitle:"浏览器隐私模式提示",
+            storageWarningMsg:"检测到您的浏览器当前为无痕/隐私模式，专业版授权状态可能无法保存。建议关闭无痕模式后使用。",
+            emailAlreadyActivated:"该邮箱已完成授权，无需重复激活"
+        },
+        en: {
+            appName:"Overseas Engineering Calculator Pro", appSub:"Industrial Metal · Overseas Tool", footer:"© 2025 | Lifetime License · One-time $4.99",
+            proBadgeFree:"⭐ FREE", proBadgeActive:"⭐ PRO ACTIVE", upgradeBtn:"⭐ BUY PRO $4.99",
+            navConvert:"Unit Conv", navPipe:"Pipe+Wall", navCivil:"Civil", navSteel:"Steel", navCable:"Cable",
+            navFlange:"Flange", navDuct:"Duct", navPaint:"Paint", navVisa:"Visa", navHistory:"History",
+            inputVal:"Value", srcUnit:"Source", dstUnit:"Target", result:"Result", exportPDF:"Export PDF",
+            pipeOD:"OD (mm)", pipeLen:"Length (m)", insThick:"Insulation (mm)", pipePaint:"Paint Area", pipeIns:"Insulation Area",
+            civilL:"Length (m)", civilW:"Width (m)", civilH:"Height (m)", civilArea:"Building Area", civilWall:"Wall Area", civilConcrete:"Concrete Vol", civilEarth:"Earthwork Vol",
+            steelAngle:"Angle", steelChannel:"Channel", steelIbeam:"I-Beam", steelRound:"Round", steelSquare:"Square", steelSpec:"Spec", calcBtn:"Calculate",
+            awg:"AWG", mm2:"mm²", diam:"Diameter (mm)",
+            flangeThick:"Flange Thick (mm)", gasketThick:"Gasket Thick (mm)", boltResult:"Bolt Length",
+            ductDia:"Diameter (mm)", ductFlow:"Flow (m³/h)", ductLen:"Length (m)", ductRes:"Friction Loss",
+            paintArea:"Area (m²)", coverage:"Coverage (m²/L)", coats:"Coats", paintResult:"Paint (L)",
+            visaProject:"Project Name", visaCompany:"Company Name", visaApplicant:"Applicant", visaDate:"Date", visaContent:"Content", visaRemarks:"Remarks", syncBtn:"Sync Result", generatePDF:"Generate PDF (PRO)",
+            historyTitle:"History (Free: 5 max)", proMsg:"⭐ Buy PRO $4.99: Unlimited + ANSI + H-Beam + Ad-Free + Visa Export",
+            btnLength:"Length", btnWeight:"Weight", btnArea:"Area", btnVolume:"Volume", btnTemp:"Temp", btnFlow:"Flow", btnPipeSize:"Pipe Size", btnSteel:"Steel",
+            tempC:"°C", tempF:"°F", tempK:"K",
+            thDN:"DN", thOD:"OD(mm)", thThick:"Thick(mm)", thWeight:"Weight(kg/m)",
+            thANSI:"NPS", thSch40:"Sch40", thSch80:"Sch80",
+            gbTitle:"GB/T 8163 Pipe", ansiTitle:"ANSI Pipe (PRO)",
+            steelPremiumTitle:"🔒 Premium Steel (PRO)", flangeTitle:"Flange Pressure", flangeANSI:"ANSI", flangeDIN:"DIN", flangeBar:"bar",
+            ductTitle:"💨 Duct Friction", ductCalcBtn:"Calculate",
+            paintTitle:"🎨 Paint Quantity", paintCalcBtn:"Calculate", paintSyncBtn:"📌 Sync Pipe",
+            cableTitle:"🔌 AWG/mm² Converter", cableConvertBtn:"⟳ Convert", cableCalcAreaBtn:"Calc Area",
+            visaTitle:"📄 Engineering Visa Form", visaGenerateBtn:"Generate PDF (PRO)", historyEmpty:"No records", adText:"📢 Ad Space - Buy PRO $4.99",
+            hbeamLabel:"H-Beam Spec", hbeamBtn:"Calculate", upgradeToPro:"Buy PRO $4.99",
+            autoActivateMsg:"🎉 PRO activated!",
+            proFeatureRequired:"⚠️ PRO feature. Click 'BUY PRO' to unlock.",
+            pleaseEnterEmail:"Please enter your email address",
+            invalidEmail:"Please enter a valid email address (e.g., name@example.com)",
+            alreadyActivated:"You have already activated PRO version",
+            activateSuccess:"PRO activated successfully! Page will refresh",
+            activateFailed:"Activation failed. Please try again later",
+            networkError:"Network error. Please check your connection and try again",
+            paymentSuccess:"Payment completed! Click the button below to activate PRO",
+            modalTitle:"Unlock PRO Version",
+            productName:"Overseas Engineering Calculator Pro License",
+            emailLabel:"📧 Email Address (license will be bound to this email)",
+            emailPlaceholder:"your@email.com",
+            emailHint:"Please enter your email address for license binding",
+            payButton:"Pay Now $4.99 USD",
+            stepTitle:"How to Activate:",
+            step1:"Enter Email",
+            step1Desc:"Fill in your email address above",
+            step2:"Complete Payment",
+            step2Desc:"Click the button above to pay via PayPal",
+            step3:"Activate",
+            step3Desc:"Return to this page and click the Activate button",
+            stepDone:"Done! All PRO features will be unlocked",
+            activateHint:"After payment, click the button below to activate",
+            activateBtn:"I have paid, Activate PRO",
+            helpText:"Need help? Contact us:",
+            closeBtn:"Close",
+            payingBtn:"Redirecting...",
+            activatingBtn:"Activating...",
+            privacyTitle:"Privacy Policy",
+            termsTitle:"Terms of Service",
+            privacyContentEN:"We collect only your email address for license delivery and verification. No personal data is shared with third parties. Cookies are used solely for remembering your language preference and PRO status. You may request data deletion at any time.",
+            privacyContentZH:"We collect only your email address for license delivery and verification. No personal data is shared with third parties. Cookies are used solely for remembering your language preference and PRO status. You may request data deletion at any time.",
+            termsContentEN:"This software is provided 'as is' without warranties. The license is non-transferable and grants lifetime access to PRO features. We reserve the right to update these terms. By purchasing, you agree to these terms.",
+            termsContentZH:"This software is provided 'as is' without warranties. The license is non-transferable and grants lifetime access to PRO features. We reserve the right to update these terms. By purchasing, you agree to these terms.",
+            storageWarningTitle:"Browser Private Mode Notice",
+            storageWarningMsg:"Your browser is in private/incognito mode. PRO license status may not be saved. Please disable private mode for best experience.",
+            emailAlreadyActivated:"This email is already activated. No need to activate again."
+        }
+    };
+    
+    for(let lang of ['es','fr','de','ru','pt','ar']) {
+        langData[lang] = JSON.parse(JSON.stringify(langData.en));
+    }
+    
+    let currentLang = "zh", calcHistory = [], lastCalcText = "", subscription = { tier: 'free', maxHistory: 5 };
+    let isPro = false;
+    let activatedEmails = new Set(); // ========== 加固点3: 重复激活判断缓存 ==========
+    
+    function t(k) { return langData[currentLang]?.[k] ?? langData.zh?.[k] ?? k; }
+    
+    // ========== 统一提示函数 ==========
+    function showMessage(message, type = 'success') {
+        const existingToast = document.querySelector('.toast-message');
+        if (existingToast) existingToast.remove();
+        const toast = document.createElement('div');
+        toast.className = `toast-message ${type}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+    
+    // ========== 加固点1: 带超时的fetch封装 ==========
+    async function fetchWithTimeout(url, options = {}, timeout = 8000) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        
+        try {
+            const response = await fetch(url, {
+                ...options,
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            return response;
+        } catch (error) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                throw new Error('Request timeout');
+            }
+            throw error;
+        }
+    }
+    
+    // ========== 加固点5: 检测本地存储可用性 ==========
+    function isLocalStorageAvailable() {
+        try {
+            const testKey = '__storage_test__';
+            localStorage.setItem(testKey, testKey);
+            localStorage.removeItem(testKey);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+    
+    // 显示无痕模式警告
+    function checkStorageAvailability() {
+        const warningDiv = document.getElementById('storageWarning');
+        if (!isLocalStorageAvailable() && warningDiv) {
+            warningDiv.innerHTML = `⚠️ ${t('storageWarningTitle')}: ${t('storageWarningMsg')}`;
+            warningDiv.style.display = 'block';
+        } else if (warningDiv) {
+            warningDiv.style.display = 'none';
+        }
+    }
+    
+    // ========== 加固点2: 强化localStorage授权读取容错 + 后端校验 ==========
+    function getProStatusFromStorage() {
+        try {
+            const stored = localStorage.getItem('engicalc_pro_tier');
+            return stored === 'pro';
+        } catch (e) {
+            console.warn('localStorage读取失败:', e);
+            return false;
+        }
+    }
+    
+    async function verifyProStatusWithBackend(email) {
+        if (!email) return false;
+        try {
+            const response = await fetchWithTimeout(`paypal-callback.php?action=check&email=${encodeURIComponent(email)}`, {}, 8000);
+            const data = await response.json();
+            return data.status === 'pro';
+        } catch (err) {
+            console.warn('后端验证失败:', err);
+            return false;
+        }
+    }
+    
+    async function syncProStatus() {
+        // 优先读取本地存储
+        const localPro = getProStatusFromStorage();
+        const email = (function() { try { return localStorage.getItem('user_email') || ''; } catch(e) { return ''; } })();
+        
+        if (localPro && email) {
+            isPro = true;
+            subscription = { tier: 'pro', maxHistory: Infinity };
+            updateProUI();
+            renderHistory();
+            buildPanels();
+            return true;
+        }
+        
+        // 本地没有但邮箱存在，尝试后端校验
+        if (email && !localPro) {
+            const backendPro = await verifyProStatusWithBackend(email);
+            if (backendPro) {
+                try {
+                    localStorage.setItem('engicalc_pro_tier', 'pro');
+                } catch (e) { console.warn('存储失败:', e); }
+                isPro = true;
+                subscription = { tier: 'pro', maxHistory: Infinity };
+                updateProUI();
+                renderHistory();
+                buildPanels();
+                showMessage(t('autoActivateMsg'), 'success');
+                return true;
+            }
+        }
+        
+        isPro = false;
+        subscription = { tier: 'free', maxHistory: 5 };
+        updateProUI();
+        renderHistory();
+        buildPanels();
+        return false;
+    }
+    
+    // ========== 单位换算数据 ==========
+    const unitData = {
+        length: { units: ["mm", "cm", "m", "km", "inch", "foot", "yard", "mile"], base: { mm:1, cm:10, m:1000, km:1000000, inch:25.4, foot:304.8, yard:914.4, mile:1609344 } },
+        weight: { units: ["g", "kg", "ton", "oz", "lb", "short ton", "long ton"], base: { g:1, kg:1000, ton:1000000, oz:28.3495, lb:453.592, "short ton":907184.74, "long ton":1016046.91 } },
+        area: { units: ["mm²", "cm²", "m²", "km²", "in²", "ft²", "yd²", "acre", "hectare"], base: { "mm²":1, "cm²":100, "m²":1000000, "km²":1e12, "in²":645.16, "ft²":92903, "yd²":836127, "acre":4.04686e9, "hectare":1e10 } },
+        volume: { units: ["mL", "L", "m³", "in³", "ft³", "yd³", "gallon (US)", "gallon (UK)", "barrel"], base: { mL:1, L:1000, "m³":1000000, "in³":16.3871, "ft³":28316.8, "yd³":7645549, "gallon (US)":3785.41, "gallon (UK)":4546.09, barrel:158987 } },
+        temperature: { units: ["°C", "°F", "K"], base: {} },
+        flow: { units: ["L/s", "L/min", "L/h", "m³/s", "m³/min", "m³/h", "gal/min (GPM)", "ft³/min (CFM)"], base: { "L/s":1, "L/min":1/60, "L/h":1/3600, "m³/s":1000, "m³/min":1000/60, "m³/h":1000/3600, "gal/min (GPM)":0.06309, "ft³/min (CFM)":28.3168 } },
+        pipe: { units: ["DN", "inch", "mm", "NPS"], base: { "DN":1, inch:25.4, mm:1, "NPS":25.4 } },
+        steel: { units: ["kg/m", "lb/ft", "kg/m²", "lb/ft²"], base: { "kg/m":1, "lb/ft":1.48816, "kg/m²":1, "lb/ft²":4.88243 } }
+    };
+    
+    let currentType = "length";
+    
+    // ========== 专业版状态管理 ==========
+    async function checkProStatus() {
+        await syncProStatus();
+    }
+    
+    function updateProUI() {
+        const proStatusSpan = document.getElementById('proBadge');
+        const upgradeBtnEl = document.getElementById('upgradeBtn');
+        const adContainer = document.getElementById('adContainer');
+        
+        if (isPro) {
+            proStatusSpan.innerHTML = t('proBadgeActive');
+            adContainer.style.display = 'none';
+            upgradeBtnEl.style.display = 'none';
+        } else {
+            proStatusSpan.innerHTML = t('proBadgeFree');
+            adContainer.style.display = 'flex';
+            adContainer.innerHTML = t('adText');
+            upgradeBtnEl.style.display = 'block';
+            upgradeBtnEl.innerHTML = t('upgradeBtn');
+        }
+    }
+    
+    function addHistory(text) { if(!text) return; calcHistory.unshift(text); if(calcHistory.length > subscription.maxHistory) calcHistory.pop(); renderHistory(); }
+    function renderHistory() { let h=document.getElementById('historyList'); if(h) h.innerHTML = calcHistory.length ? calcHistory.map(h=>`<div class="history-item">📌 ${h}</div>`).join('') : `<div class="history-item">${t('historyEmpty')}</div>`; }
+    
+    // ========== 单位换算核心函数 ==========
+    function convertUnit() {
+        let v = parseFloat(document.getElementById('convVal')?.value);
+        if(isNaN(v)) {
+            if(document.getElementById('convResult')) document.getElementById('convResult').innerHTML = `${t('result')}: --`;
+            return;
+        }
+        let f = document.getElementById('srcUnit')?.value;
+        let tgt = document.getElementById('dstUnit')?.value;
+        if(!f || !tgt) return;
+        
+        let res;
+        if(currentType === 'temperature') {
+            let c;
+            if(f === "°C") c = v;
+            else if(f === "°F") c = (v - 32) * 5 / 9;
+            else c = v - 273.15;
+            if(tgt === "°C") res = c;
+            else if(tgt === "°F") res = c * 9 / 5 + 32;
+            else res = c + 273.15;
+        } else {
+            const base = unitData[currentType].base;
+            if(!base[f] || !base[tgt]) return;
+            res = v * base[f] / base[tgt];
+        }
+        
+        document.getElementById('convResult').innerHTML = `${t('result')}: ${res.toFixed(4)} ${tgt}`;
+        lastCalcText = `${v} ${f} = ${res.toFixed(4)} ${tgt}`;
+        addHistory(lastCalcText);
+    }
+    
+    function renderUnits() {
+        const units = unitData[currentType].units;
+        const srcSel = document.getElementById('srcUnit');
+        const dstSel = document.getElementById('dstUnit');
+        if(!srcSel || !dstSel) return;
+        
+        srcSel.innerHTML = "";
+        dstSel.innerHTML = "";
+        units.forEach(u => {
+            srcSel.innerHTML += `<option value="${u}">${u}</option>`;
+            dstSel.innerHTML += `<option value="${u}">${u}</option>`;
+        });
+        convertUnit();
+    }
+    
+    // ========== 其他计算函数 ==========
+    function calcPipe() {
+        let od = parseFloat(document.getElementById('pipeOD')?.value) || 0;
+        let len = parseFloat(document.getElementById('pipeLen')?.value) || 0;
+        let th = parseFloat(document.getElementById('insThick')?.value) || 0;
+        if(od && len) {
+            let paint = (Math.PI * od / 1000) * len;
+            let ins = (Math.PI * (od + th * 2) / 1000) * len;
+            document.getElementById('pipeAreaResult').innerHTML = `${t('pipePaint')}: ${paint.toFixed(2)} m² | ${t('pipeIns')}: ${ins.toFixed(2)} m²`;
+            addHistory(`${t('pipePaint')}: ${paint.toFixed(2)}m²`);
+        }
+    }
+    
+    let civilType = "area";
+    function civilCalc() {
+        let L = parseFloat(document.getElementById('civilL')?.value) || 0;
+        let W = parseFloat(document.getElementById('civilW')?.value) || 0;
+        let H = parseFloat(document.getElementById('civilH')?.value) || 0;
+        let res, txt;
+        if(civilType === 'area') {
+            res = L * W;
+            txt = `${t('civilArea')}: ${res.toFixed(2)} m²`;
+        } else if(civilType === 'wall') {
+            res = 2 * (L + W) * H;
+            txt = `${t('civilWall')}: ${res.toFixed(2)} m²`;
+        } else if(civilType === 'concrete') {
+            res = L * W * H;
+            txt = `${t('civilConcrete')}: ${res.toFixed(2)} m³`;
+        } else {
+            res = L * W * H;
+            txt = `${t('civilEarth')}: ${res.toFixed(2)} m³`;
+        }
+        document.getElementById('civilResult').innerHTML = txt;
+        addHistory(txt);
+    }
+    
+    function calcSteel() {
+        let spec = document.getElementById('steelSpec')?.value;
+        let res = `≈ ${(parseFloat(spec) || 50) * 0.00785} kg/m`;
+        document.getElementById('steelResult').innerHTML = res;
+        addHistory(`Steel: ${res}`);
+    }
+    
+    function updateCable() {
+        let awg = parseFloat(document.getElementById('awgVal')?.value);
+        if(!isNaN(awg)) {
+            let mm2 = 0.025 * Math.pow(92, (36 - awg) / 39);
+            document.getElementById('cableResult').innerHTML = `AWG #${awg} ≈ ${mm2.toFixed(2)} mm²`;
+            document.getElementById('mm2Val').value = mm2.toFixed(2);
+        }
+    }
+    
+    function calcDiamArea() {
+        let d = parseFloat(document.getElementById('diamCable')?.value);
+        if(!isNaN(d) && d > 0) {
+            let area = Math.PI * d * d / 4;
+            document.getElementById('diamResult').innerHTML = `${t('diam')} ${d}mm → ${area.toFixed(2)} mm²`;
+            addHistory(`Cable area: ${area.toFixed(2)}mm²`);
+        }
+    }
+    
+    function calcBolt() {
+        let f = parseFloat(document.getElementById('flangeThick')?.value) || 0;
+        let g = parseFloat(document.getElementById('gasketThick')?.value) || 0;
+        let len = 2 * f + g + 12;
+        document.getElementById('boltResult').innerHTML = `${t('boltResult')}: ${len.toFixed(1)} mm`;
+        addHistory(`Bolt: ${len.toFixed(0)}mm`);
+    }
+    
+    function calcDuct() {
+        let d = parseFloat(document.getElementById('ductDia')?.value) || 200;
+        let q = parseFloat(document.getElementById('ductFlow')?.value) || 500;
+        let vel = q / 3600 / (Math.PI * (d / 1000) * (d / 1000) / 4);
+        let loss = 0.02 * 100 / 1000 * 1.2 * vel * vel / 2 / 100;
+        document.getElementById('ductResult').innerHTML = `${t('ductRes')}: ${Math.abs(loss).toFixed(1)} Pa`;
+        addHistory(`Duct loss: ${Math.abs(loss).toFixed(0)}Pa`);
+    }
+    
+    function calcPaint() {
+        let a = parseFloat(document.getElementById('paintArea')?.value) || 0;
+        let r = parseFloat(document.getElementById('coverageRate')?.value) || 8;
+        let c = parseFloat(document.getElementById('coats')?.value) || 2;
+        let ttl = a / r * c;
+        document.getElementById('paintResult').innerHTML = `${t('paintResult')}: ${ttl.toFixed(1)} L`;
+        addHistory(`Paint: ${ttl.toFixed(1)}L`);
+    }
+    
+    function syncPaintFromPipe() {
+        let od = parseFloat(document.getElementById('pipeOD')?.value) || 0;
+        let len = parseFloat(document.getElementById('pipeLen')?.value) || 0;
+        if(od && len) {
+            let area = (Math.PI * od / 1000) * len;
+            document.getElementById('paintArea').value = area.toFixed(2);
+            calcPaint();
+        }
+    }
+    
+    function syncToVisa() {
+        let cur = document.getElementById('visaContent')?.value || '';
+        let newTxt = lastCalcText || new Date().toLocaleString();
+        document.getElementById('visaContent').value = cur ? cur + "\n" + newTxt : newTxt;
+    }
+    
+    function exportGeneric(title, content, file) {
+        let doc = new jsPDF();
+        doc.text(title, 20, 20);
+        doc.text(doc.splitTextToSize(content || "-", 170), 20, 35);
+        doc.save(file);
+    }
+    
+    function exportVisa() {
+        if (!isPro) {
+            showMessage(t('proFeatureRequired'), 'warning');
+            return;
+        }
+        
+        let doc = new jsPDF();
+        let y = 20;
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text(t('visaTitle'), 20, y);
+        y += 15;
+        
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text(t('visaCompany') + ':', 20, y);
+        doc.setFont('helvetica', 'normal');
+        let company = document.getElementById('visaCompany')?.value || '-';
+        doc.text(company, 70, y);
+        y += 10;
+        
+        doc.setFont('helvetica', 'bold');
+        doc.text(t('visaProject') + ':', 20, y);
+        doc.setFont('helvetica', 'normal');
+        let project = document.getElementById('visaProject')?.value || '-';
+        doc.text(project, 70, y);
+        y += 10;
+        
+        doc.setFont('helvetica', 'bold');
+        doc.text(t('visaApplicant') + ':', 20, y);
+        doc.setFont('helvetica', 'normal');
+        let applicant = document.getElementById('visaApplicant')?.value || '-';
+        doc.text(applicant, 70, y);
+        y += 10;
+        
+        doc.setFont('helvetica', 'bold');
+        doc.text(t('visaDate') + ':', 20, y);
+        doc.setFont('helvetica', 'normal');
+        let date = document.getElementById('visaDate')?.value || new Date().toISOString().split('T')[0];
+        doc.text(date, 70, y);
+        y += 15;
+        
+        doc.line(20, y, 190, y);
+        y += 10;
+        
+        doc.setFont('helvetica', 'bold');
+        doc.text(t('visaContent') + ':', 20, y);
+        y += 8;
+        
+        doc.setFont('helvetica', 'normal');
+        let content = document.getElementById('visaContent')?.value || '-';
+        let lines = doc.splitTextToSize(content, 170);
+        doc.text(lines, 20, y);
+        y += lines.length * 6 + 10;
+        
+        let remarks = document.getElementById('visaRemarks')?.value;
+        if(remarks && remarks.trim() !== '') {
+            doc.setFont('helvetica', 'bold');
+            doc.text(t('visaRemarks') + ':', 20, y);
+            y += 8;
+            doc.setFont('helvetica', 'normal');
+            let remarkLines = doc.splitTextToSize(remarks, 170);
+            doc.text(remarkLines, 20, y);
+            y += remarkLines.length * 6 + 10;
+        }
+        
+        doc.setFontSize(9);
+        doc.setTextColor(128, 128, 128);
+        doc.text('Generated by Overseas Engineering Calculator Pro', 20, 270);
+        doc.save("Engineering_Visa_" + date + ".pdf");
+        addHistory(`Visa PDF generated: ${project}`);
+        showMessage(`${t('visaTitle')} ${t('exportPDF')} ${currentLang === 'zh' ? '成功' : 'success'}`, 'success');
+    }
+    
+    // ========== 支付弹窗管理 ==========
+    const modal = document.getElementById('paymentModal');
+    const modalContent = document.getElementById('paymentModalContent');
+    const upgradeBtnEl = document.getElementById('upgradeBtn');
+    
+    let isActivating = false;
+    
+    // 动态生成支付弹窗内容
+    function updatePaymentModalContent() {
+        if (!modalContent) return;
+        
+        modalContent.innerHTML = `
+            <h2>${t('modalTitle')}</h2>
+            <div class="product-info">
+                <div>🏗️ ${t('productName')}</div>
+                <div class="product-price">$4.99 USD</div>
+                <div style="font-size: 12px; color: #b0bec5; margin-top: 5px;">Lifetime License · One-time Payment</div>
+            </div>
+            <div class="input-group">
+                <label>${t('emailLabel')}</label>
+                <input type="email" id="paymentEmail" placeholder="${t('emailPlaceholder')}" autocomplete="email" value="">
+                <div class="email-hint">${t('emailHint')}</div>
+            </div>
+            
+            <a href="https://www.paypal.com/ncp/payment/Z7SH6QTCH86LG" target="_blank" class="pay-link-btn" id="directPayLink">
+                ${t('payButton')}
+            </a>
+            
+            <div class="steps-container">
+                <div style="font-weight: bold; margin-bottom: 12px;">${t('stepTitle')}</div>
+                <div class="step-item">
+                    <span class="step-num">1</span>
+                    <span class="step-text"><strong>${t('step1')}</strong> — ${t('step1Desc')}</span>
+                </div>
+                <div class="step-item">
+                    <span class="step-num">2</span>
+                    <span class="step-text"><strong>${t('step2')}</strong> — ${t('step2Desc')}</span>
+                </div>
+                <div class="step-item">
+                    <span class="step-num">3</span>
+                    <span class="step-text"><strong>${t('step3')}</strong> — ${t('step3Desc')}</span>
+                </div>
+                <div style="margin-top: 10px; font-size: 12px; color: #ffd700; text-align: center;">✨ ${t('stepDone')}</div>
+            </div>
+            
+            <div class="activate-section">
+                <div style="font-size: 12px; color: #888; margin-bottom: 10px;">${t('activateHint')}</div>
+                <button id="manualActivateBtn" class="manual-activate-btn">${t('activateBtn')}</button>
+            </div>
+            
+            <div style="margin-top: 15px; text-align: center; font-size: 11px; color: #888; border-top: 1px solid #2d3748; padding-top: 12px;">
+                ${t('helpText')} <span id="contactEmail" style="color: #4fc3f7; cursor: pointer;">zhikexin.111@outlook.com</span>
+            </div>
+            
+            <button class="close-modal" id="closeModalBtn">${t('closeBtn')}</button>
+        `;
+        
+        // ========== 新增：付款链接点击上报 ==========
+        const payLink = document.getElementById('directPayLink');
+        if (payLink) {
+            // 移除旧事件避免重复绑定
+            const newPayLink = payLink.cloneNode(true);
+            payLink.parentNode.replaceChild(newPayLink, payLink);
+            newPayLink.addEventListener('click', function(e) {
+                const email = document.getElementById('paymentEmail').value.trim();
+                if (!email) {
+                    e.preventDefault();
+                    showMessage(t('pleaseEnterEmail'), 'warning');
+                    return;
+                }
+                if (!email.includes('@') || !email.includes('.')) {
+                    e.preventDefault();
+                    showMessage(t('invalidEmail'), 'warning');
+                    return;
+                }
+                // 上报付款链接点击
+                StatReporter.reportPayLinkClick();
+                this.classList.add('loading');
+                this.textContent = t('payingBtn');
+                setTimeout(() => {
+                    this.classList.remove('loading');
+                    this.textContent = t('payButton');
+                }, 3000);
+            });
+        }
+        
+        // ========== 新增：激活按钮点击上报 ==========
+        const manualBtn = document.getElementById('manualActivateBtn');
+        if (manualBtn) {
+            const newManualBtn = manualBtn.cloneNode(true);
+            manualBtn.parentNode.replaceChild(newManualBtn, manualBtn);
+            newManualBtn.addEventListener('click', () => {
+                const email = document.getElementById('paymentEmail').value.trim();
+                // 检查是否已激活
+                if (activatedEmails.has(email) || (function() { try { return localStorage.getItem('engicalc_pro_tier') === 'pro' && localStorage.getItem('user_email') === email; } catch(e) { return false; } })()) {
+                    showMessage(t('emailAlreadyActivated'), 'warning');
+                    return;
+                }
+                // 上报激活按钮点击
+                StatReporter.reportActivateClick();
+                handleManualActivate();
+            });
+        }
+        
+        const newCloseBtn = document.getElementById('closeModalBtn');
+        if (newCloseBtn) {
+            const clonedCloseBtn = newCloseBtn.cloneNode(true);
+            newCloseBtn.parentNode.replaceChild(clonedCloseBtn, newCloseBtn);
+            clonedCloseBtn.addEventListener('click', closePaymentModal);
+        }
+        
+        const newContactEmail = document.getElementById('contactEmail');
+        if (newContactEmail) {
+            const clonedContact = newContactEmail.cloneNode(true);
+            newContactEmail.parentNode.replaceChild(clonedContact, newContactEmail);
+            clonedContact.addEventListener('click', function() {
+                window.location.href = 'mailto:zhikexin.111@outlook.com?subject=PRO%20License%20Activation';
+            });
+        }
+    }
+    
+    // ========== 加固点1: 激活函数中的fetch超时 ==========
+    async function handleManualActivate() {
+        if (isActivating) return;
+        
+        const manualBtn = document.getElementById('manualActivateBtn');
+        const emailInput = document.getElementById('paymentEmail');
+        const email = emailInput ? emailInput.value.trim() : '';
+        
+        if (!email) {
+            showMessage(t('pleaseEnterEmail'), 'warning');
+            return;
+        }
+        if (!email.includes('@') || !email.includes('.')) {
+            showMessage(t('invalidEmail'), 'warning');
+            return;
+        }
+        
+        // ========== 加固点3: 重复激活判断（再次检查） ==========
+        if (isPro || activatedEmails.has(email)) {
+            showMessage(t('alreadyActivated'), 'success');
+            closePaymentModal();
+            return;
+        }
+        
+        isActivating = true;
+        if (manualBtn) {
+            manualBtn.classList.add('loading');
+            manualBtn.textContent = t('activatingBtn');
+        }
+        
+        try {
+            try {
+                localStorage.setItem('user_email', email);
+                localStorage.setItem('engicalc_pro_tier', 'pro');
+            } catch (storageErr) {
+                console.warn('localStorage写入失败:', storageErr);
+                showMessage(t('storageWarningMsg'), 'warning');
+            }
+            
+            activatedEmails.add(email);
+            await new Promise(resolve => setTimeout(resolve, 800));
+            isPro = true;
+            subscription = { tier: 'pro', maxHistory: Infinity };
+            updateProUI();
+            buildPanels();
+            renderHistory();
+            showMessage(t('activateSuccess'), 'success');
+            closePaymentModal();
+            setTimeout(() => location.reload(), 1500);
+        } catch (err) {
+            console.error('Activation error:', err);
+            showMessage(t('activateFailed'), 'error');
+        } finally {
+            isActivating = false;
+            if (manualBtn) {
+                manualBtn.classList.remove('loading');
+                manualBtn.textContent = t('activateBtn');
+            }
+        }
+    }
+    
+    // ========== 新增：付费弹窗打开上报 ==========
+    function openPaymentModal() {
+        if(isPro) {
+            showMessage(t('alreadyActivated'), 'success');
+            return;
+        }
+        
+        // 上报弹窗打开
+        StatReporter.reportPopupClick();
+        
+        const existingEmailInput = document.getElementById('paymentEmail');
+        const savedEmailValue = existingEmailInput ? existingEmailInput.value : (function() { try { return localStorage.getItem('user_email') || ''; } catch(e) { return ''; } })();
+        updatePaymentModalContent();
+        const newEmailInput = document.getElementById('paymentEmail');
+        if (newEmailInput && savedEmailValue) {
+            newEmailInput.value = savedEmailValue;
+        }
+        modal.style.display = 'flex';
+    }
+    
+    function closePaymentModal() { 
+        modal.style.display = 'none'; 
+        isActivating = false;
+        const manualBtn = document.getElementById('manualActivateBtn');
+        if (manualBtn) {
+            manualBtn.classList.remove('loading');
+            manualBtn.textContent = t('activateBtn');
+        }
+    }
+    
+    if(upgradeBtnEl) upgradeBtnEl.addEventListener('click', openPaymentModal);
+    if(modal) modal.addEventListener('click', function(e) { if(e.target === modal) closePaymentModal(); });
+    
+    // 合规弹窗管理
+    const legalModal = document.getElementById('legalModal');
+    const legalModalContent = document.getElementById('legalModalContent');
+    
+    function showLegalModal(type) {
+        let title = '';
+        let contentEN = '';
+        let contentZH = '';
+        
+        if (type === 'privacy') {
+            title = t('privacyTitle');
+            contentEN = t('privacyContentEN');
+            contentZH = t('privacyContentZH');
+        } else {
+            title = t('termsTitle');
+            contentEN = t('termsContentEN');
+            contentZH = t('termsContentZH');
+        }
+        
+        legalModalContent.innerHTML = `
+            <h2>${title}</h2>
+            <div class="legal-content">
+                <div style="margin-bottom: 15px;">
+                    <div style="color: #ffd700; font-size: 13px; margin-bottom: 8px;">📜 English Version</div>
+                    <p>${contentEN}</p>
+                </div>
+                <div class="zh-hint">
+                    <div style="color: #ffd700; font-size: 13px; margin-bottom: 8px;">📖 中文对照</div>
+                    <p>${contentZH}</p>
+                </div>
+            </div>
+            <button class="close-modal" id="closeLegalModalBtn">${t('closeBtn')}</button>
+        `;
+        
+        legalModal.style.display = 'flex';
+        
+        const closeLegalBtn = document.getElementById('closeLegalModalBtn');
+        if (closeLegalBtn) {
+            closeLegalBtn.addEventListener('click', closeLegalModal);
+        }
+    }
+    
+    function closeLegalModal() {
+        legalModal.style.display = 'none';
+    }
+    
+    if (legalModal) {
+        legalModal.addEventListener('click', function(e) {
+            if (e.target === legalModal) closeLegalModal();
+        });
+    }
+    
+    const privacyLink = document.getElementById('privacyLink');
+    const termsLink = document.getElementById('termsLink');
+    
+    if (privacyLink) {
+        privacyLink.addEventListener('click', () => showLegalModal('privacy'));
+    }
+    if (termsLink) {
+        termsLink.addEventListener('click', () => showLegalModal('terms'));
+    }
+    
+    // ========== 构建所有面板 ==========
+    function buildPanels() {
+        // 单位换算面板
+        let convertPanel = document.getElementById('convertPanel');
+        if(convertPanel) {
+            convertPanel.innerHTML = `
+                <div class="calc-card">
+                    <div class="type-buttons-grid" id="unitTypeGroup"></div>
+                    <div class="input-group"><label>${t('inputVal')}</label><input id="convVal" placeholder="100"></div>
+                    <div class="grid-2col">
+                        <div class="input-group"><label>${t('srcUnit')}</label><select id="srcUnit"></select></div>
+                        <div class="input-group"><label>${t('dstUnit')}</label><select id="dstUnit"></select></div>
+                    </div>
+                    <div class="result-box" id="convResult">--</div>
+                    <button class="action-btn" id="exportConvPdf">${t('exportPDF')}</button>
+                </div>`;
+        }
+        
+        // 管道面板
+        let pipePanel = document.getElementById('pipePanel');
+        if(pipePanel) {
+            pipePanel.innerHTML = `
+                <div class="calc-card">
+                    <div class="section-title">📐 ${t('pipePaint')}</div>
+                    <div class="grid-2col">
+                        <div class="input-group"><label>${t('pipeOD')}</label><input id="pipeOD" value="219"></div>
+                        <div class="input-group"><label>${t('pipeLen')}</label><input id="pipeLen" value="100"></div>
+                        <div class="input-group"><label>${t('insThick')}</label><input id="insThick" value="0"></div>
+                    </div>
+                    <div class="result-box" id="pipeAreaResult">--</div>
+                    <div class="section-title">📏 ${t('gbTitle')}</div>
+                    <table class="data-table"><thead><tr><th>${t('thDN')}</th><th>${t('thOD')}</th><th>${t('thThick')}</th><th>${t('thWeight')}</th></tr></thead><tbody id="pipeThickTable"></tbody></table>
+                    <div class="section-title">🔩 ${t('ansiTitle')}</div>
+                    <table class="data-table"><thead><tr><th>${t('thANSI')}</th><th>${t('thOD')}</th><th>${t('thSch40')}</th><th>${t('thSch80')}</th></tr></thead><tbody id="ansiPipeTable"></tbody></table>
+                    <button class="action-btn" id="exportPipePdf">${t('exportPDF')}</button>
+                </div>`;
+        }
+        
+        // 土建面板
+        let civilPanel = document.getElementById('civilPanel');
+        if(civilPanel) {
+            civilPanel.innerHTML = `
+                <div class="calc-card">
+                    <div class="type-buttons-grid" id="civilTypeGroup"></div>
+                    <div class="grid-3col">
+                        <div class="input-group"><label>${t('civilL')}</label><input id="civilL"></div>
+                        <div class="input-group"><label>${t('civilW')}</label><input id="civilW"></div>
+                        <div class="input-group"><label>${t('civilH')}</label><input id="civilH"></div>
+                    </div>
+                    <div class="result-box" id="civilResult">--</div>
+                    <button class="action-btn" id="exportCivilPdf">${t('exportPDF')}</button>
+                </div>`;
+        }
+        
+        // 型钢面板
+        let steelPanel = document.getElementById('steelPanel');
+        if(steelPanel) {
+            steelPanel.innerHTML = `
+                <div class="calc-card">
+                    <div class="section-title">📌 ${t('steelAngle')}</div>
+                    <select id="steelTypeSelect"><option value="angle">${t('steelAngle')}</option><option value="channel">${t('steelChannel')}</option><option value="ibeam">${t('steelIbeam')}</option></select>
+                    <div class="input-group"><label>${t('steelSpec')}</label><input id="steelSpec" placeholder="50x5"></div>
+                    <button class="small-btn" id="calcSteelBtn">${t('calcBtn')}</button>
+                    <div class="result-box" id="steelResult">--</div>
+                    <div class="section-title">${t('steelPremiumTitle')}</div>
+                    <div id="premiumSteelSection"></div>
+                </div>`;
+        }
+        
+        // 电缆面板
+        let cablePanel = document.getElementById('cablePanel');
+        if(cablePanel) {
+            cablePanel.innerHTML = `
+                <div class="calc-card">
+                    <div class="section-title">${t('cableTitle')}</div>
+                    <div class="grid-2col">
+                        <div class="input-group"><label>${t('awg')}</label><input id="awgVal" value="14"></div>
+                        <div class="input-group"><label>${t('mm2')}</label><input id="mm2Val"></div>
+                    </div>
+                    <button class="small-btn" id="syncCableBtn">${t('cableConvertBtn')}</button>
+                    <div class="result-box" id="cableResult">--</div>
+                    <div class="input-group"><label>${t('diam')}</label><input id="diamCable"></div>
+                    <button class="small-btn" id="calcDiamBtn">${t('cableCalcAreaBtn')}</button>
+                    <div class="result-box" id="diamResult">--</div>
+                    <button class="action-btn" id="exportCablePdf">${t('exportPDF')}</button>
+                </div>`;
+        }
+        
+        // 法兰面板
+        let flangePanel = document.getElementById('flangePanel');
+        if(flangePanel) {
+            flangePanel.innerHTML = `
+                <div class="calc-card">
+                    <div class="section-title">🔩 ${t('flangeTitle')}</div>
+                    <table class="data-table"><thead><tr><th>${t('flangeANSI')}</th><th>${t('flangeDIN')}</th><th>${t('flangeBar')}</th></td></thead><tbody><tr><td>150<\/td><td>PN20<\/td><td>20<\/td><tr></tbody></table>
+                    <div class="grid-2col">
+                        <div class="input-group"><label>${t('flangeThick')}</label><input id="flangeThick"></div>
+                        <div class="input-group"><label>${t('gasketThick')}</label><input id="gasketThick"></div>
+                    </div>
+                    <button class="small-btn" id="calcBoltBtn">${t('boltResult')}</button>
+                    <div class="result-box" id="boltResult">--</div>
+                </div>`;
+        }
+        
+        // 风管面板
+        let ductPanel = document.getElementById('ductPanel');
+        if(ductPanel) {
+            ductPanel.innerHTML = `
+                <div class="calc-card">
+                    <div class="section-title">${t('ductTitle')}</div>
+                    <div class="grid-2col">
+                        <div class="input-group"><label>${t('ductDia')}</label><input id="ductDia" value="200"></div>
+                        <div class="input-group"><label>${t('ductFlow')}</label><input id="ductFlow" value="500"></div>
+                        <div class="input-group"><label>${t('ductLen')}</label><input id="ductLen" value="100"></div>
+                    </div>
+                    <button class="small-btn" id="calcDuctBtn">${t('ductCalcBtn')}</button>
+                    <div class="result-box" id="ductResult">--</div>
+                </div>`;
+        }
+        
+        // 涂料面板
+        let paintPanel = document.getElementById('paintPanel');
+        if(paintPanel) {
+            paintPanel.innerHTML = `
+                <div class="calc-card">
+                    <div class="section-title">${t('paintTitle')}</div>
+                    <div class="grid-2col">
+                        <div class="input-group"><label>${t('paintArea')}</label><input id="paintArea"></div>
+                        <div class="input-group"><label>${t('coverage')}</label><input id="coverageRate" value="8"></div>
+                    </div>
+                    <div class="input-group"><label>${t('coats')}</label><input id="coats" value="2"></div>
+                    <button class="small-btn" id="calcPaintBtn">${t('paintCalcBtn')}</button>
+                    <button class="small-btn" id="syncPaintFromPipe">${t('paintSyncBtn')}</button>
+                    <div class="result-box" id="paintResult">--</div>
+                </div>`;
+        }
+        
+        // 签证单面板
+        let visaPanel = document.getElementById('visaPanel');
+        if(visaPanel) {
+            visaPanel.innerHTML = `
+                <div class="calc-card">
+                    <div class="section-title">📄 ${t('visaTitle')}</div>
+                    <div class="input-group"><label>${t('visaCompany')}</label><input id="visaCompany" placeholder="e.g., ABC Engineering Ltd."></div>
+                    <div class="input-group"><label>${t('visaProject')}</label><input id="visaProject"></div>
+                    <div class="input-group"><label>${t('visaApplicant')}</label><input id="visaApplicant"></div>
+                    <div class="input-group"><label>${t('visaDate')}</label><input type="date" id="visaDate" value="${new Date().toISOString().split('T')[0]}"></div>
+                    <div class="input-group"><label>${t('visaContent')}</label><textarea id="visaContent" rows="4"></textarea></div>
+                    <div class="input-group"><label>${t('visaRemarks')}</label><textarea id="visaRemarks" rows="2"></textarea></div>
+                    <button class="small-btn" id="syncToVisaBtn">${t('syncBtn')}</button>
+                    <button class="action-btn" id="exportVisaPdf">${isPro ? t('visaGenerateBtn') : t('proFeatureRequired')}</button>
+                    ${!isPro ? `<div style="margin-top: 10px; font-size: 12px; color: #ffd700; text-align: center;">⭐ ${t('proFeatureRequired')}</div>` : ''}
+                </div>`;
+        }
+        
+        // 历史记录面板
+        let historyPanel = document.getElementById('historyPanel');
+        if(historyPanel) {
+            historyPanel.innerHTML = `
+                <div class="calc-card">
+                    <div id="historyTitle">${t('historyTitle')}</div>
+                    <div id="historyList"></div>
+                    <div class="pro-banner">${t('proMsg')}</div>
+                </div>`;
+        }
+        
+        // 填充管道数据表
+        const pipeData = [{dn:"DN15",od:21.3,thick:2.8,weight:1.28},{dn:"DN20",od:26.9,thick:2.8,weight:1.66},{dn:"DN25",od:33.7,thick:3.2,weight:2.41},{dn:"DN50",od:60.3,thick:3.8,weight:5.29},{dn:"DN100",od:114.3,thick:4.5,weight:12.18}];
+        const pipeTable = document.getElementById('pipeThickTable');
+        if(pipeTable) pipeTable.innerHTML = pipeData.map(p => `<tr>.html${p.dn}<tr>.html${p.od}</td>.html${p.thick}</td>.html${p.weight}</td></table>`).join('');
+        
+        // 专业版功能显示
+        const ansiTable = document.getElementById('ansiPipeTable');
+        const premiumSection = document.getElementById('premiumSteelSection');
+        
+        if(ansiTable && premiumSection) {
+            if(isPro) {
+                const ansiData = [{nps:"1/2",od:21.3,sch40:2.77,sch80:3.73},{nps:"1",od:33.4,sch40:3.38,sch80:4.55},{nps:"2",od:60.3,sch40:3.91,sch80:5.54},{nps:"4",od:114.3,sch40:6.02,sch80:8.56},{nps:"6",od:168.3,sch40:7.11,sch80:10.97}];
+                ansiTable.innerHTML = ansiData.map(p => `<tr>.html${p.nps}<tr>.html${p.od}</td>.html${p.sch40}</td>.html${p.sch80}</td></tr>`).join('');
+                premiumSection.innerHTML = `<div class="input-group"><label>${t('hbeamLabel')}</label><input id="hbeamSpec" placeholder="200x200x8"></div><button class="small-btn" id="calcHbeam">${t('hbeamBtn')}</button><div class="result-box" id="hbeamResult">--</div>`;
+                const calcHbeam = document.getElementById('calcHbeam');
+                if(calcHbeam) {
+                    calcHbeam.addEventListener('click', () => {
+                        let sp = document.getElementById('hbeamSpec')?.value || "200x200x8";
+                        let parts = sp.split('x');
+                        let w = (parseFloat(parts[0]) * 0.00785 * 0.5).toFixed(2);
+                        document.getElementById('hbeamResult').innerHTML = `${w} kg/m`;
+                        addHistory(`H-Beam: ${w}kg/m`);
+                    });
+                }
+            } else {
+                ansiTable.innerHTML = `<tr><td colspan="4" style="text-align:center;">⭐ ${t('upgradeToPro')} to access ANSI data</td></td>`;
+                premiumSection.innerHTML = `<div class="pro-locked" style="padding:16px;text-align:center">🔒 ${t('steelPremiumTitle')}</div>`;
+            }
+        }
+        
+        // 事件绑定
+        document.getElementById('exportConvPdf')?.addEventListener('click', () => exportGeneric("Convert", lastCalcText, "convert.pdf"));
+        document.getElementById('exportPipePdf')?.addEventListener('click', () => exportGeneric("Pipe", document.getElementById('pipeAreaResult')?.innerText || "", "pipe.pdf"));
+        document.getElementById('exportCivilPdf')?.addEventListener('click', () => exportGeneric("Civil", document.getElementById('civilResult')?.innerText || "", "civil.pdf"));
+        document.getElementById('exportCablePdf')?.addEventListener('click', () => exportGeneric("Cable", document.getElementById('cableResult')?.innerText || "", "cable.pdf"));
+        
+        const exportVisaBtn = document.getElementById('exportVisaPdf');
+        if(exportVisaBtn) {
+            if(isPro) {
+                exportVisaBtn.disabled = false;
+                exportVisaBtn.classList.remove('disabled');
+                exportVisaBtn.innerHTML = t('visaGenerateBtn');
+                exportVisaBtn.addEventListener('click', exportVisa);
+            } else {
+                exportVisaBtn.disabled = true;
+                exportVisaBtn.classList.add('disabled');
+                exportVisaBtn.innerHTML = t('proFeatureRequired');
+            }
+        }
+        
+        document.getElementById('syncCableBtn')?.addEventListener('click', updateCable);
+        document.getElementById('calcDiamBtn')?.addEventListener('click', calcDiamArea);
+        document.getElementById('calcBoltBtn')?.addEventListener('click', calcBolt);
+        document.getElementById('calcDuctBtn')?.addEventListener('click', calcDuct);
+        document.getElementById('calcPaintBtn')?.addEventListener('click', calcPaint);
+        document.getElementById('syncPaintFromPipe')?.addEventListener('click', syncPaintFromPipe);
+        document.getElementById('syncToVisaBtn')?.addEventListener('click', syncToVisa);
+        document.getElementById('calcSteelBtn')?.addEventListener('click', calcSteel);
+        document.getElementById('pipeOD')?.addEventListener('input', calcPipe);
+        document.getElementById('pipeLen')?.addEventListener('input', calcPipe);
+        document.getElementById('insThick')?.addEventListener('input', calcPipe);
+        document.getElementById('civilL')?.addEventListener('input', civilCalc);
+        document.getElementById('civilW')?.addEventListener('input', civilCalc);
+        document.getElementById('civilH')?.addEventListener('input', civilCalc);
+        document.getElementById('convVal')?.addEventListener('input', convertUnit);
+        document.getElementById('srcUnit')?.addEventListener('change', convertUnit);
+        document.getElementById('dstUnit')?.addEventListener('change', convertUnit);
+        
+        const unitGroup = document.getElementById('unitTypeGroup');
+        if(unitGroup) {
+            const types = ['length','weight','area','volume','temperature','flow','pipe','steel'];
+            const typeNames = [t('btnLength'),t('btnWeight'),t('btnArea'),t('btnVolume'),t('btnTemp'),t('btnFlow'),t('btnPipeSize'),t('btnSteel')];
+            unitGroup.innerHTML = types.map((type, i) => `<button class="type-btn ${type === 'length' ? 'active' : ''}" data-type="${type}">${typeNames[i]}</button>`).join('');
+            unitGroup.querySelectorAll('.type-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    unitGroup.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentType = btn.dataset.type;
+                    renderUnits();
+                });
+            });
+        }
+        
+        const civilGroup = document.getElementById('civilTypeGroup');
+        if(civilGroup) {
+            const types = ['area','wall','concrete','earth'];
+            const typeNames = [t('civilArea'),t('civilWall'),t('civilConcrete'),t('civilEarth')];
+            civilGroup.innerHTML = types.map((type, i) => `<button class="type-btn ${type === 'area' ? 'active' : ''}" data-civil="${type}">${typeNames[i]}</button>`).join('');
+            civilGroup.querySelectorAll('.type-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    civilGroup.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    civilType = btn.dataset.civil;
+                    civilCalc();
+                });
+            });
+        }
+        
+        renderUnits();
+    }
+    
+    // ========== 侧边栏导航 ==========
+    function initSidebar() {
+        let nav = document.getElementById('navMenu');
+        if(!nav) return;
+        let items = ['convert','pipe','civil','steel','cable','flange','duct','paint','visa','history'];
+        nav.innerHTML = items.map(id => `<button class="nav-item ${id === 'convert' ? 'active' : ''}" data-tab="${id}"><i>${id==='convert'?'📐':id==='pipe'?'🔧':id==='civil'?'🏗️':id==='steel'?'⚙️':id==='cable'?'⚡':id==='flange'?'🔩':id==='duct'?'💨':id==='paint'?'🎨':id==='visa'?'📄':'📜'}</i> ${t('nav'+id.charAt(0).toUpperCase()+id.slice(1))}</button>`).join('');
+        document.querySelectorAll('.nav-item').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                document.getElementById(btn.dataset.tab + 'Panel').classList.add('active');
+                if(btn.dataset.tab === 'history') renderHistory();
+            };
+        });
+    }
+    
+    // ========== 刷新UI ==========
+    function refreshUI() {
+        const logoText = document.getElementById('logoText');
+        const logoSub = document.getElementById('logoSub');
+        const footerText = document.getElementById('footerText');
+        const upgradeButton = document.getElementById('upgradeBtn');
+        
+        if(logoText) logoText.innerHTML = t('appName');
+        if(logoSub) logoSub.innerHTML = t('appSub');
+        if(footerText) footerText.innerHTML = t('footer');
+        if(upgradeButton) upgradeButton.innerHTML = t('upgradeBtn');
+        
+        initSidebar();
+        buildPanels();
+        renderHistory();
+        calcPipe();
+        civilCalc();
+        updateCable();
+    }
+    
+    // 语言切换
+    const langSelector = document.getElementById('langSelector');
+    if(langSelector) {
+        langSelector.onchange = (e) => { 
+            currentLang = e.target.value; 
+            refreshUI();
+            checkStorageAvailability();
+            if (modal && modal.style.display === 'flex') {
+                const savedEmail = document.getElementById('paymentEmail')?.value || (function() { try { return localStorage.getItem('user_email') || ''; } catch(e) { return ''; } })();
+                updatePaymentModalContent();
+                const emailInput = document.getElementById('paymentEmail');
+                if (emailInput && savedEmail) {
+                    emailInput.value = savedEmail;
+                }
+            }
+        };
+    }
+    
+    // ========== 新增：页面加载完成上报页面浏览 ==========
+    // 初始化
+    refreshUI();
+    checkStorageAvailability();
+    checkProStatus().then(() => {
+        // 页面加载完成后上报
+        StatReporter.reportPageView();
+    });
+    
+    // 管理员按钮（已隐藏）
+    const adminBtn = document.getElementById('adminUnlockBtn');
+    if(adminBtn) {
+        adminBtn.addEventListener('click', function() {
+            if(confirm('⚠️ Admin Unlock: Activate PRO manually?')) {
+                const email = prompt('Enter email to activate:', 'admin@example.com');
+                if(email && email.includes('@')) {
+                    try {
+                        localStorage.setItem('user_email', email);
+                        localStorage.setItem('engicalc_pro_tier', 'pro');
+                    } catch(e) { console.warn(e); }
+                    activatedEmails.add(email);
+                    isPro = true;
+                    subscription = { tier: 'pro', maxHistory: Infinity };
+                    updateProUI();
+                    buildPanels();
+                    renderHistory();
+                    showMessage(t('activateSuccess'), 'success');
+                    setTimeout(() => location.reload(), 1500);
+                }
+            }
+        });
+    }
+})();
+</script>
+</body>
+</html>
