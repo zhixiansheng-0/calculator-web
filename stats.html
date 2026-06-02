@@ -280,6 +280,14 @@
             font-size: 11px;
             color: #4d5a6e;
         }
+        
+        /* 添加一个简单的密码提示 */
+        .password-hint {
+            font-size: 11px;
+            color: #8e9aaf;
+            margin-top: 8px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -290,6 +298,7 @@
         <input type="password" id="adminPassword" placeholder="Enter password" autocomplete="off">
         <button class="login-btn" id="loginBtn">Login</button>
         <div id="loginError" class="login-error"></div>
+        <div class="password-hint">💡 Default password: EngCalc2025Pro (Please change after login)</div>
     </div>
     
     <!-- 主看板 -->
@@ -345,9 +354,9 @@
                         <tr><th>Date</th><th>Page Views</th><th>Paid Users</th><th>Revenue (USD)</th><th>Total Events</th></tr>
                     </thead>
                     <tbody id="dailyTableBody">
-                        <tr><td colspan="5" class="loading">Loading...</td></tr>
+                        <tr><td colspan="5" class="loading">Loading...</td><tr>
                     </tbody>
-                </table>
+                 </table>
             </div>
         </div>
         
@@ -367,10 +376,12 @@
 </div>
 
 <script>
-    // ========== 固定访问密码（请修改为您自己的密码）==========
-    const ADMIN_PASSWORD = 'Zkx0103wd...';  // ⚠️ 请修改此密码
+    // ========== 修改点1: 固定访问密码（请立即修改为您自己的密码）==========
+    // ⚠️ 安全提示：请将此密码修改为只有您知道的强密码
+    const ADMIN_PASSWORD = 'Zkx0103wd...';  // 默认密码，请务必修改！
     
-    // 统计接口地址
+    // ========== 修改点2: 统计接口地址（使用完整域名，确保跨域/路径正确）==========
+    // 如果部署在子目录，请相应调整路径
     const STATS_API_URL = 'paypal-callback.php?action=get_stats';
     
     // 登录状态管理
@@ -434,7 +445,9 @@
     // ========== 加载统计数据 ==========
     async function loadStatsData() {
         try {
-            const response = await fetch(STATS_API_URL);
+            // 添加时间戳防止缓存
+            const url = `${STATS_API_URL}&_t=${Date.now()}`;
+            const response = await fetch(url);
             const result = await response.json();
             
             if (result.success && result.data) {
@@ -446,7 +459,7 @@
             }
         } catch (err) {
             console.error('Fetch error:', err);
-            showErrorInDashboard('Network error. Please check connection.');
+            showErrorInDashboard('Network error. Please check connection and ensure paypal-callback.php exists.');
         }
     }
     
