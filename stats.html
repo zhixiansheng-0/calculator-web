@@ -377,12 +377,10 @@
 
 <script>
     // ========== 修改点1: 固定访问密码（请立即修改为您自己的密码）==========
-    // ⚠️ 安全提示：请将此密码修改为只有您知道的强密码
-    const ADMIN_PASSWORD = 'Zkx0103wd...';  // 默认密码，请务必修改！
+    const ADMIN_PASSWORD = 'Zkx0103wd...';
     
-    // ========== 修改点2: 统计接口地址（使用完整域名，确保跨域/路径正确）==========
-    // 如果部署在子目录，请相应调整路径
-    const STATS_API_URL = 'paypal-callback.php?action=get_stats';
+    // ========== 修改点2: 接口改为阿里云免费三级域名（关键已改完）==========
+   const STATS_API_URL = 'https://wh-axj285pwodctyugjb87.my3w.com/paypal-callback.php?action=get_stats';
     
     // 登录状态管理
     let isLoggedIn = false;
@@ -446,7 +444,7 @@
     async function loadStatsData() {
         try {
             // 添加时间戳防止缓存
-            const url = `${STATS_API_URL}&_t=${Date.now()}`;
+            const url = `${STATS_API_URL}?_t=${Date.now()}`;
             const response = await fetch(url);
             const result = await response.json();
             
@@ -459,7 +457,7 @@
             }
         } catch (err) {
             console.error('Fetch error:', err);
-            showErrorInDashboard('Network error. Please check connection and ensure paypal-callback.php exists.');
+            showErrorInDashboard('Network error. Check the PHP files on Aliyun host.');
         }
     }
     

@@ -89,7 +89,6 @@
         .pro-locked { filter: blur(3px); pointer-events: none; opacity: 0.5; user-select: none; }
         .pro-banner { background: #2a2416; padding: 12px; border-radius: 20px; text-align: center; margin: 16px 0; color: #ffd966; }
         
-        /* 支付弹窗样式 */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -152,7 +151,6 @@
         .modal-content input:focus { outline: none; border-color: #ffd700; }
         .modal-content .email-hint { font-size: 11px; color: #888; margin-top: 5px; text-align: center; }
         
-        /* 付款按钮样式 */
         .pay-link-btn {
             display: block;
             width: 100%;
@@ -207,7 +205,6 @@
         .close-modal { width: 100%; padding: 12px; background: #2d3748; border: none; border-radius: 12px; color: #fff; cursor: pointer; margin-top: 15px; transition: 0.3s; }
         .close-modal:hover { background: #ff4444; }
         
-        /* 提示消息样式 */
         .toast-message {
             position: fixed;
             bottom: 30px;
@@ -250,7 +247,6 @@
         
         .admin-btn { display: none; }
         
-        /* 操作步骤样式 */
         .steps-container {
             background: rgba(79, 195, 247, 0.1);
             border-radius: 12px;
@@ -280,7 +276,6 @@
         }
         .step-text { flex: 1; }
         
-        /* 无痕模式提示条 */
         .storage-warning {
             background: rgba(255, 152, 0, 0.2);
             border: 1px solid #ff9800;
@@ -327,8 +322,9 @@
         <div id="flangePanel" class="panel"></div>
         <div id="ductPanel" class="panel"></div>
         <div id="paintPanel" class="panel"></div>
-        <div id="visaPanel" class="panel"></div>
-        <div id="historyPanel" class="panel"></div>
+        <!-- 专业版功能面板 - 添加 pro-function 类 -->
+        <div id="visaPanel" class="panel pro-function"></div>
+        <div id="historyPanel" class="panel pro-function"></div>
         
         <div class="footer-links">
             <a id="privacyLink">Privacy Policy</a>
@@ -339,7 +335,7 @@
     </div>
 </div>
 
-<!-- 支付弹窗 - 动态内容由JS根据语言生成 -->
+<!-- 支付弹窗 -->
 <div class="modal-overlay" id="paymentModal">
     <div class="modal-content" id="paymentModalContent"></div>
 </div>
@@ -355,9 +351,8 @@
 (function(){
     const { jsPDF } = window.jspdf;
     
-    // ========== 修改点1: 域名配置 - 统一使用 Vercel 域名 ==========
+    // ========== 域名配置 ==========
     const DOMAIN = 'https://calculator-web-black.vercel.app';
-    // PayPal 跳转链接配置
     const PAYPAL_RETURN_URL = DOMAIN + '/activate.html';
     const PAYPAL_CANCEL_URL = DOMAIN + '/price.html';
     
@@ -365,7 +360,6 @@
     const StatReporter = {
         reportUrl: DOMAIN + '/paypal-callback.php?action=stat',
         pageViewReported: false,
-        
         send: function(eventName) {
             try {
                 const data = JSON.stringify({ event: eventName });
@@ -384,25 +378,10 @@
                 console.debug('[Stat] report error:', e);
             }
         },
-        
-        reportPageView: function() {
-            if (!this.pageViewReported) {
-                this.pageViewReported = true;
-                this.send('page_view');
-            }
-        },
-        
-        reportPopupClick: function() {
-            this.send('popup_click');
-        },
-        
-        reportPayLinkClick: function() {
-            this.send('pay_link_click');
-        },
-        
-        reportActivateClick: function() {
-            this.send('activate_click');
-        }
+        reportPageView: function() { if (!this.pageViewReported) { this.pageViewReported = true; this.send('page_view'); } },
+        reportPopupClick: function() { this.send('popup_click'); },
+        reportPayLinkClick: function() { this.send('pay_link_click'); },
+        reportActivateClick: function() { this.send('activate_click'); }
     };
     
     // ========== 多语言数据 ==========
@@ -574,27 +553,17 @@
     }
     
     function isLocalStorageAvailable() {
-        try {
-            const testKey = '__storage_test__';
-            localStorage.setItem(testKey, testKey);
-            localStorage.removeItem(testKey);
-            return true;
-        } catch (e) { return false; }
+        try { const testKey = '__storage_test__'; localStorage.setItem(testKey, testKey); localStorage.removeItem(testKey); return true; } catch(e) { return false; }
     }
     
     function checkStorageAvailability() {
         const warningDiv = document.getElementById('storageWarning');
-        if (!isLocalStorageAvailable() && warningDiv) {
-            warningDiv.innerHTML = `⚠️ ${t('storageWarningTitle')}: ${t('storageWarningMsg')}`;
-            warningDiv.style.display = 'block';
-        } else if (warningDiv) { warningDiv.style.display = 'none'; }
+        if (!isLocalStorageAvailable() && warningDiv) { warningDiv.innerHTML = `⚠️ ${t('storageWarningTitle')}: ${t('storageWarningMsg')}`; warningDiv.style.display = 'block'; }
+        else if (warningDiv) { warningDiv.style.display = 'none'; }
     }
     
     function getProStatusFromStorage() {
-        try {
-            const stored = localStorage.getItem('engicalc_pro_tier');
-            return stored === 'pro';
-        } catch (e) { return false; }
+        try { const stored = localStorage.getItem('engicalc_pro_tier'); return stored === 'pro'; } catch(e) { return false; }
     }
     
     async function verifyProStatusWithBackend(email) {
@@ -603,15 +572,14 @@
             const response = await fetchWithTimeout(`${DOMAIN}/paypal-callback.php?action=check&email=${encodeURIComponent(email)}`, {}, 8000);
             const data = await response.json();
             return data.status === 'pro';
-        } catch (err) { return false; }
+        } catch(err) { return false; }
     }
     
     async function syncProStatus() {
         const localPro = getProStatusFromStorage();
         const email = (function() { try { return localStorage.getItem('user_email') || ''; } catch(e) { return ''; } })();
         if (localPro && email) {
-            isPro = true;
-            subscription = { tier: 'pro', maxHistory: Infinity };
+            isPro = true; subscription = { tier: 'pro', maxHistory: Infinity };
             updateProUI(); renderHistory(); buildPanels();
             return true;
         }
@@ -619,15 +587,13 @@
             const backendPro = await verifyProStatusWithBackend(email);
             if (backendPro) {
                 try { localStorage.setItem('engicalc_pro_tier', 'pro'); } catch(e) {}
-                isPro = true;
-                subscription = { tier: 'pro', maxHistory: Infinity };
+                isPro = true; subscription = { tier: 'pro', maxHistory: Infinity };
                 updateProUI(); renderHistory(); buildPanels();
                 showMessage(t('autoActivateMsg'), 'success');
                 return true;
             }
         }
-        isPro = false;
-        subscription = { tier: 'free', maxHistory: 5 };
+        isPro = false; subscription = { tier: 'free', maxHistory: 5 };
         updateProUI(); renderHistory(); buildPanels();
         return false;
     }
@@ -651,17 +617,8 @@
         const proStatusSpan = document.getElementById('proBadge');
         const upgradeBtnEl = document.getElementById('upgradeBtn');
         const adContainer = document.getElementById('adContainer');
-        if (isPro) {
-            proStatusSpan.innerHTML = t('proBadgeActive');
-            adContainer.style.display = 'none';
-            upgradeBtnEl.style.display = 'none';
-        } else {
-            proStatusSpan.innerHTML = t('proBadgeFree');
-            adContainer.style.display = 'flex';
-            adContainer.innerHTML = t('adText');
-            upgradeBtnEl.style.display = 'block';
-            upgradeBtnEl.innerHTML = t('upgradeBtn');
-        }
+        if (isPro) { proStatusSpan.innerHTML = t('proBadgeActive'); adContainer.style.display = 'none'; upgradeBtnEl.style.display = 'none'; }
+        else { proStatusSpan.innerHTML = t('proBadgeFree'); adContainer.style.display = 'flex'; adContainer.innerHTML = t('adText'); upgradeBtnEl.style.display = 'block'; upgradeBtnEl.innerHTML = t('upgradeBtn'); }
     }
     
     function addHistory(text) { if(!text) return; calcHistory.unshift(text); if(calcHistory.length > subscription.maxHistory) calcHistory.pop(); renderHistory(); }
@@ -691,10 +648,7 @@
         const srcSel = document.getElementById('srcUnit'), dstSel = document.getElementById('dstUnit');
         if(!srcSel || !dstSel) return;
         srcSel.innerHTML = ""; dstSel.innerHTML = "";
-        units.forEach(u => {
-            srcSel.innerHTML += `<option value="${u}">${u}</option>`;
-            dstSel.innerHTML += `<option value="${u}">${u}</option>`;
-        });
+        units.forEach(u => { srcSel.innerHTML += `<option value="${u}">${u}</option>`; dstSel.innerHTML += `<option value="${u}">${u}</option>`; });
         convertUnit();
     }
     
@@ -850,46 +804,22 @@
     const upgradeBtnEl = document.getElementById('upgradeBtn');
     let isActivating = false;
     
-    // ========== 修改点2: 付款链接 - 使用配置的域名和跳转参数 ==========
     function updatePaymentModalContent() {
         if (!modalContent) return;
-        // 构建带有 return/cancel 参数的 PayPal 链接
         const paypalLinkWithParams = `https://www.paypal.com/ncp/payment/Z7SH6QTCH86LG?return=${encodeURIComponent(PAYPAL_RETURN_URL)}&cancel_return=${encodeURIComponent(PAYPAL_CANCEL_URL)}`;
         
         modalContent.innerHTML = `
             <h2>${t('modalTitle')}</h2>
-            <div class="product-info">
-                <div>🏗️ ${t('productName')}</div>
-                <div class="product-price">$4.99 USD</div>
-                <div style="font-size: 12px; color: #b0bec5; margin-top: 5px;">Lifetime License · One-time Payment</div>
-            </div>
-            <div class="input-group">
-                <label>${t('emailLabel')}</label>
-                <input type="email" id="paymentEmail" placeholder="${t('emailPlaceholder')}" autocomplete="email" value="">
-                <div class="email-hint">${t('emailHint')}</div>
-            </div>
-            
-            <a href="${paypalLinkWithParams}" target="_blank" class="pay-link-btn" id="directPayLink">
-                ${t('payButton')}
-            </a>
-            
-            <div class="steps-container">
-                <div style="font-weight: bold; margin-bottom: 12px;">${t('stepTitle')}</div>
-                <div class="step-item"><span class="step-num">1</span><span class="step-text"><strong>${t('step1')}</strong> — ${t('step1Desc')}</span></div>
-                <div class="step-item"><span class="step-num">2</span><span class="step-text"><strong>${t('step2')}</strong> — ${t('step2Desc')}</span></div>
-                <div class="step-item"><span class="step-num">3</span><span class="step-text"><strong>${t('step3')}</strong> — ${t('step3Desc')}</span></div>
-                <div style="margin-top: 10px; font-size: 12px; color: #ffd700; text-align: center;">✨ ${t('stepDone')}</div>
-            </div>
-            
-            <div class="activate-section">
-                <div style="font-size: 12px; color: #888; margin-bottom: 10px;">${t('activateHint')}</div>
-                <button id="manualActivateBtn" class="manual-activate-btn">${t('activateBtn')}</button>
-            </div>
-            
-            <div style="margin-top: 15px; text-align: center; font-size: 11px; color: #888; border-top: 1px solid #2d3748; padding-top: 12px;">
-                ${t('helpText')} <span id="contactEmail" style="color: #4fc3f7; cursor: pointer;">zhikexin.111@outlook.com</span>
-            </div>
-            
+            <div class="product-info"><div>🏗️ ${t('productName')}</div><div class="product-price">$4.99 USD</div><div style="font-size:12px;color:#b0bec5;">Lifetime License · One-time Payment</div></div>
+            <div class="input-group"><label>${t('emailLabel')}</label><input type="email" id="paymentEmail" placeholder="${t('emailPlaceholder')}" autocomplete="email" value=""><div class="email-hint">${t('emailHint')}</div></div>
+            <a href="${paypalLinkWithParams}" target="_blank" class="pay-link-btn" id="directPayLink">${t('payButton')}</a>
+            <div class="steps-container"><div style="font-weight:bold;margin-bottom:12px;">${t('stepTitle')}</div>
+            <div class="step-item"><span class="step-num">1</span><span class="step-text"><strong>${t('step1')}</strong> — ${t('step1Desc')}</span></div>
+            <div class="step-item"><span class="step-num">2</span><span class="step-text"><strong>${t('step2')}</strong> — ${t('step2Desc')}</span></div>
+            <div class="step-item"><span class="step-num">3</span><span class="step-text"><strong>${t('step3')}</strong> — ${t('step3Desc')}</span></div>
+            <div style="margin-top:10px;font-size:12px;color:#ffd700;text-align:center;">✨ ${t('stepDone')}</div></div>
+            <div class="activate-section"><div style="font-size:12px;color:#888;margin-bottom:10px;">${t('activateHint')}</div><button id="manualActivateBtn" class="manual-activate-btn">${t('activateBtn')}</button></div>
+            <div style="margin-top:15px;text-align:center;font-size:11px;color:#888;border-top:1px solid #2d3748;padding-top:12px;">${t('helpText')} <span id="contactEmail" style="color:#4fc3f7;cursor:pointer;">zhikexin.111@outlook.com</span></div>
             <button class="close-modal" id="closeModalBtn">${t('closeBtn')}</button>
         `;
         
@@ -899,23 +829,12 @@
             payLink.parentNode.replaceChild(newPayLink, payLink);
             newPayLink.addEventListener('click', function(e) {
                 const email = document.getElementById('paymentEmail').value.trim();
-                if (!email) {
-                    e.preventDefault();
-                    showMessage(t('pleaseEnterEmail'), 'warning');
-                    return;
-                }
-                if (!email.includes('@') || !email.includes('.')) {
-                    e.preventDefault();
-                    showMessage(t('invalidEmail'), 'warning');
-                    return;
-                }
+                if (!email) { e.preventDefault(); showMessage(t('pleaseEnterEmail'), 'warning'); return; }
+                if (!email.includes('@') || !email.includes('.')) { e.preventDefault(); showMessage(t('invalidEmail'), 'warning'); return; }
                 StatReporter.reportPayLinkClick();
                 this.classList.add('loading');
                 this.textContent = t('payingBtn');
-                setTimeout(() => {
-                    this.classList.remove('loading');
-                    this.textContent = t('payButton');
-                }, 3000);
+                setTimeout(() => { this.classList.remove('loading'); this.textContent = t('payButton'); }, 3000);
             });
         }
         
@@ -945,9 +864,7 @@
         if (newContactEmail) {
             const clonedContact = newContactEmail.cloneNode(true);
             newContactEmail.parentNode.replaceChild(clonedContact, newContactEmail);
-            clonedContact.addEventListener('click', function() {
-                window.location.href = 'mailto:zhikexin.111@outlook.com?subject=PRO%20License%20Activation';
-            });
+            clonedContact.addEventListener('click', function() { window.location.href = 'mailto:zhikexin.111@outlook.com?subject=PRO%20License%20Activation'; });
         }
     }
     
@@ -965,13 +882,12 @@
             try { localStorage.setItem('user_email', email); localStorage.setItem('engicalc_pro_tier', 'pro'); } catch(e) { showMessage(t('storageWarningMsg'), 'warning'); }
             activatedEmails.add(email);
             await new Promise(resolve => setTimeout(resolve, 800));
-            isPro = true;
-            subscription = { tier: 'pro', maxHistory: Infinity };
+            isPro = true; subscription = { tier: 'pro', maxHistory: Infinity };
             updateProUI(); buildPanels(); renderHistory();
             showMessage(t('activateSuccess'), 'success');
             closePaymentModal();
             setTimeout(() => location.reload(), 1500);
-        } catch (err) { showMessage(t('activateFailed'), 'error'); }
+        } catch(err) { showMessage(t('activateFailed'), 'error'); }
         finally { isActivating = false; if (manualBtn) { manualBtn.classList.remove('loading'); manualBtn.textContent = t('activateBtn'); } }
     }
     
@@ -998,14 +914,7 @@
         let title = '', contentEN = '', contentZH = '';
         if (type === 'privacy') { title = t('privacyTitle'); contentEN = t('privacyContentEN'); contentZH = t('privacyContentZH'); }
         else { title = t('termsTitle'); contentEN = t('termsContentEN'); contentZH = t('termsContentZH'); }
-        legalModalContent.innerHTML = `
-            <h2>${title}</h2>
-            <div class="legal-content">
-                <div style="margin-bottom: 15px;"><div style="color: #ffd700; font-size: 13px; margin-bottom: 8px;">📜 English Version</div><p>${contentEN}</p></div>
-                <div class="zh-hint"><div style="color: #ffd700; font-size: 13px; margin-bottom: 8px;">📖 中文对照</div><p>${contentZH}</p></div>
-            </div>
-            <button class="close-modal" id="closeLegalModalBtn">${t('closeBtn')}</button>
-        `;
+        legalModalContent.innerHTML = `<h2>${title}</h2><div class="legal-content"><div style="margin-bottom:15px;"><div style="color:#ffd700;font-size:13px;margin-bottom:8px;">📜 English Version</div><p>${contentEN}</p></div><div class="zh-hint"><div style="color:#ffd700;font-size:13px;margin-bottom:8px;">📖 中文对照</div><p>${contentZH}</p></div></div><button class="close-modal" id="closeLegalModalBtn">${t('closeBtn')}</button>`;
         legalModal.style.display = 'flex';
         const closeLegalBtn = document.getElementById('closeLegalModalBtn');
         if (closeLegalBtn) closeLegalBtn.addEventListener('click', closeLegalModal);
@@ -1019,108 +928,59 @@
     if (privacyLink) privacyLink.addEventListener('click', () => showLegalModal('privacy'));
     if (termsLink) termsLink.addEventListener('click', () => showLegalModal('terms'));
     
+    // ========== 构建面板 ==========
     function buildPanels() {
         let convertPanel = document.getElementById('convertPanel');
         if(convertPanel) {
-            convertPanel.innerHTML = `
-                <div class="calc-card"><div class="type-buttons-grid" id="unitTypeGroup"></div><div class="input-group"><label>${t('inputVal')}</label><input id="convVal" placeholder="100"></div>
-                <div class="grid-2col"><div class="input-group"><label>${t('srcUnit')}</label><select id="srcUnit"></select></div><div class="input-group"><label>${t('dstUnit')}</label><select id="dstUnit"></select></div></div>
-                <div class="result-box" id="convResult">--</div><button class="action-btn" id="exportConvPdf">${t('exportPDF')}</button></div>`;
+            convertPanel.innerHTML = `<div class="calc-card"><div class="type-buttons-grid" id="unitTypeGroup"></div><div class="input-group"><label>${t('inputVal')}</label><input id="convVal" placeholder="100"></div><div class="grid-2col"><div class="input-group"><label>${t('srcUnit')}</label><select id="srcUnit"></select></div><div class="input-group"><label>${t('dstUnit')}</label><select id="dstUnit"></select></div></div><div class="result-box" id="convResult">--</div><button class="action-btn" id="exportConvPdf">${t('exportPDF')}</button></div>`;
         }
         let pipePanel = document.getElementById('pipePanel');
         if(pipePanel) {
-            pipePanel.innerHTML = `
-                <div class="calc-card"><div class="section-title">📐 ${t('pipePaint')}</div>
-                <div class="grid-2col"><div class="input-group"><label>${t('pipeOD')}</label><input id="pipeOD" value="219"></div><div class="input-group"><label>${t('pipeLen')}</label><input id="pipeLen" value="100"></div><div class="input-group"><label>${t('insThick')}</label><input id="insThick" value="0"></div></div>
-                <div class="result-box" id="pipeAreaResult">--</div>
-                <div class="section-title">📏 ${t('gbTitle')}</div>
-                <table class="data-table"><thead><tr><th>${t('thDN')}</th><th>${t('thOD')}</th><th>${t('thThick')}</th><th>${t('thWeight')}</th></tr></thead><tbody id="pipeThickTable"></tbody></table>
-                <div class="section-title">🔩 ${t('ansiTitle')}</div>
-                <table class="data-table"><thead><tr><th>${t('thANSI')}</th><th>${t('thOD')}</th><th>${t('thSch40')}</th><th>${t('thSch80')}</th></tr></thead><tbody id="ansiPipeTable"></tbody></tr>
-                <button class="action-btn" id="exportPipePdf">${t('exportPDF')}</button></div>`;
+            pipePanel.innerHTML = `<div class="calc-card"><div class="section-title">📐 ${t('pipePaint')}</div><div class="grid-2col"><div class="input-group"><label>${t('pipeOD')}</label><input id="pipeOD" value="219"></div><div class="input-group"><label>${t('pipeLen')}</label><input id="pipeLen" value="100"></div><div class="input-group"><label>${t('insThick')}</label><input id="insThick" value="0"></div></div><div class="result-box" id="pipeAreaResult">--</div><div class="section-title">📏 ${t('gbTitle')}</div><table class="data-table"><thead><tr><th>${t('thDN')}</th><th>${t('thOD')}</th><th>${t('thThick')}</th><th>${t('thWeight')}</th></tr></thead><tbody id="pipeThickTable"></tbody></table><div class="section-title">🔩 ${t('ansiTitle')}</div><table class="data-table"><thead><tr><th>${t('thANSI')}</th><th>${t('thOD')}</th><th>${t('thSch40')}</th><th>${t('thSch80')}</th></tr></thead><tbody id="ansiPipeTable" class="pro-function"></tbody></table><button class="action-btn" id="exportPipePdf">${t('exportPDF')}</button></div>`;
         }
         let civilPanel = document.getElementById('civilPanel');
         if(civilPanel) {
-            civilPanel.innerHTML = `
-                <div class="calc-card"><div class="type-buttons-grid" id="civilTypeGroup"></div>
-                <div class="grid-3col"><div class="input-group"><label>${t('civilL')}</label><input id="civilL"></div><div class="input-group"><label>${t('civilW')}</label><input id="civilW"></div><div class="input-group"><label>${t('civilH')}</label><input id="civilH"></div></div>
-                <div class="result-box" id="civilResult">--</div><button class="action-btn" id="exportCivilPdf">${t('exportPDF')}</button></div>`;
+            civilPanel.innerHTML = `<div class="calc-card"><div class="type-buttons-grid" id="civilTypeGroup"></div><div class="grid-3col"><div class="input-group"><label>${t('civilL')}</label><input id="civilL"></div><div class="input-group"><label>${t('civilW')}</label><input id="civilW"></div><div class="input-group"><label>${t('civilH')}</label><input id="civilH"></div></div><div class="result-box" id="civilResult">--</div><button class="action-btn" id="exportCivilPdf">${t('exportPDF')}</button></div>`;
         }
         let steelPanel = document.getElementById('steelPanel');
         if(steelPanel) {
-            steelPanel.innerHTML = `
-                <div class="calc-card"><div class="section-title">📌 ${t('steelAngle')}</div>
-                <select id="steelTypeSelect"><option value="angle">${t('steelAngle')}</option><option value="channel">${t('steelChannel')}</option><option value="ibeam">${t('steelIbeam')}</option></select>
-                <div class="input-group"><label>${t('steelSpec')}</label><input id="steelSpec" placeholder="50x5"></div>
-                <button class="small-btn" id="calcSteelBtn">${t('calcBtn')}</button>
-                <div class="result-box" id="steelResult">--</div>
-                <div class="section-title">${t('steelPremiumTitle')}</div><div id="premiumSteelSection"></div></div>`;
+            steelPanel.innerHTML = `<div class="calc-card"><div class="section-title">📌 ${t('steelAngle')}</div><select id="steelTypeSelect"><option value="angle">${t('steelAngle')}</option><option value="channel">${t('steelChannel')}</option><option value="ibeam">${t('steelIbeam')}</option></select><div class="input-group"><label>${t('steelSpec')}</label><input id="steelSpec" placeholder="50x5"></div><button class="small-btn" id="calcSteelBtn">${t('calcBtn')}</button><div class="result-box" id="steelResult">--</div><div class="section-title">${t('steelPremiumTitle')}</div><div id="premiumSteelSection" class="pro-function"></div></div>`;
         }
         let cablePanel = document.getElementById('cablePanel');
         if(cablePanel) {
-            cablePanel.innerHTML = `
-                <div class="calc-card"><div class="section-title">${t('cableTitle')}</div>
-                <div class="grid-2col"><div class="input-group"><label>${t('awg')}</label><input id="awgVal" value="14"></div><div class="input-group"><label>${t('mm2')}</label><input id="mm2Val"></div></div>
-                <button class="small-btn" id="syncCableBtn">${t('cableConvertBtn')}</button>
-                <div class="result-box" id="cableResult">--</div>
-                <div class="input-group"><label>${t('diam')}</label><input id="diamCable"></div>
-                <button class="small-btn" id="calcDiamBtn">${t('cableCalcAreaBtn')}</button>
-                <div class="result-box" id="diamResult">--</div>
-                <button class="action-btn" id="exportCablePdf">${t('exportPDF')}</button></div>`;
+            cablePanel.innerHTML = `<div class="calc-card"><div class="section-title">${t('cableTitle')}</div><div class="grid-2col"><div class="input-group"><label>${t('awg')}</label><input id="awgVal" value="14"></div><div class="input-group"><label>${t('mm2')}</label><input id="mm2Val"></div></div><button class="small-btn" id="syncCableBtn">${t('cableConvertBtn')}</button><div class="result-box" id="cableResult">--</div><div class="input-group"><label>${t('diam')}</label><input id="diamCable"></div><button class="small-btn" id="calcDiamBtn">${t('cableCalcAreaBtn')}</button><div class="result-box" id="diamResult">--</div><button class="action-btn" id="exportCablePdf">${t('exportPDF')}</button></div>`;
         }
         let flangePanel = document.getElementById('flangePanel');
         if(flangePanel) {
-            flangePanel.innerHTML = `
-                <div class="calc-card"><div class="section-title">🔩 ${t('flangeTitle')}</div>
-                <table class="data-table"><thead><tr><th>${t('flangeANSI')}</th><th>${t('flangeDIN')}</th><th>${t('flangeBar')}</th></tr></thead><tbody><tr><td>150<\/td><td>PN20<\/td><td>20<\/td></tr></tbody></table>
-                <div class="grid-2col"><div class="input-group"><label>${t('flangeThick')}</label><input id="flangeThick"></div><div class="input-group"><label>${t('gasketThick')}</label><input id="gasketThick"></div></div>
-                <button class="small-btn" id="calcBoltBtn">${t('boltResult')}</button><div class="result-box" id="boltResult">--</div></div>`;
+            flangePanel.innerHTML = `<div class="calc-card"><div class="section-title">🔩 ${t('flangeTitle')}</div><table class="data-table"><thead><tr><th>${t('flangeANSI')}</th><th>${t('flangeDIN')}</th><th>${t('flangeBar')}</th></tr></thead><tbody><tr><td>150<\/td><td>PN20<\/td><td>20<\/td></tr></tbody></tr><div class="grid-2col"><div class="input-group"><label>${t('flangeThick')}</label><input id="flangeThick"></div><div class="input-group"><label>${t('gasketThick')}</label><input id="gasketThick"></div></div><button class="small-btn" id="calcBoltBtn">${t('boltResult')}</button><div class="result-box" id="boltResult">--</div></div>`;
         }
         let ductPanel = document.getElementById('ductPanel');
         if(ductPanel) {
-            ductPanel.innerHTML = `
-                <div class="calc-card"><div class="section-title">${t('ductTitle')}</div>
-                <div class="grid-2col"><div class="input-group"><label>${t('ductDia')}</label><input id="ductDia" value="200"></div><div class="input-group"><label>${t('ductFlow')}</label><input id="ductFlow" value="500"></div><div class="input-group"><label>${t('ductLen')}</label><input id="ductLen" value="100"></div></div>
-                <button class="small-btn" id="calcDuctBtn">${t('ductCalcBtn')}</button><div class="result-box" id="ductResult">--</div></div>`;
+            ductPanel.innerHTML = `<div class="calc-card"><div class="section-title">${t('ductTitle')}</div><div class="grid-2col"><div class="input-group"><label>${t('ductDia')}</label><input id="ductDia" value="200"></div><div class="input-group"><label>${t('ductFlow')}</label><input id="ductFlow" value="500"></div><div class="input-group"><label>${t('ductLen')}</label><input id="ductLen" value="100"></div></div><button class="small-btn" id="calcDuctBtn">${t('ductCalcBtn')}</button><div class="result-box" id="ductResult">--</div></div>`;
         }
         let paintPanel = document.getElementById('paintPanel');
         if(paintPanel) {
-            paintPanel.innerHTML = `
-                <div class="calc-card"><div class="section-title">${t('paintTitle')}</div>
-                <div class="grid-2col"><div class="input-group"><label>${t('paintArea')}</label><input id="paintArea"></div><div class="input-group"><label>${t('coverage')}</label><input id="coverageRate" value="8"></div></div>
-                <div class="input-group"><label>${t('coats')}</label><input id="coats" value="2"></div>
-                <button class="small-btn" id="calcPaintBtn">${t('paintCalcBtn')}</button>
-                <button class="small-btn" id="syncPaintFromPipe">${t('paintSyncBtn')}</button>
-                <div class="result-box" id="paintResult">--</div></div>`;
+            paintPanel.innerHTML = `<div class="calc-card"><div class="section-title">${t('paintTitle')}</div><div class="grid-2col"><div class="input-group"><label>${t('paintArea')}</label><input id="paintArea"></div><div class="input-group"><label>${t('coverage')}</label><input id="coverageRate" value="8"></div></div><div class="input-group"><label>${t('coats')}</label><input id="coats" value="2"></div><button class="small-btn" id="calcPaintBtn">${t('paintCalcBtn')}</button><button class="small-btn" id="syncPaintFromPipe">${t('paintSyncBtn')}</button><div class="result-box" id="paintResult">--</div></div>`;
         }
         let visaPanel = document.getElementById('visaPanel');
         if(visaPanel) {
-            visaPanel.innerHTML = `
-                <div class="calc-card"><div class="section-title">📄 ${t('visaTitle')}</div>
-                <div class="input-group"><label>${t('visaCompany')}</label><input id="visaCompany" placeholder="e.g., ABC Engineering Ltd."></div>
-                <div class="input-group"><label>${t('visaProject')}</label><input id="visaProject"></div>
-                <div class="input-group"><label>${t('visaApplicant')}</label><input id="visaApplicant"></div>
-                <div class="input-group"><label>${t('visaDate')}</label><input type="date" id="visaDate" value="${new Date().toISOString().split('T')[0]}"></div>
-                <div class="input-group"><label>${t('visaContent')}</label><textarea id="visaContent" rows="4"></textarea></div>
-                <div class="input-group"><label>${t('visaRemarks')}</label><textarea id="visaRemarks" rows="2"></textarea></div>
-                <button class="small-btn" id="syncToVisaBtn">${t('syncBtn')}</button>
-                <button class="action-btn" id="exportVisaPdf">${isPro ? t('visaGenerateBtn') : t('proFeatureRequired')}</button>
-                ${!isPro ? `<div style="margin-top: 10px; font-size: 12px; color: #ffd700; text-align: center;">⭐ ${t('proFeatureRequired')}</div>` : ''}
-            </div>`;
+            visaPanel.innerHTML = `<div class="calc-card pro-function"><div class="section-title">📄 ${t('visaTitle')}</div><div class="input-group"><label>${t('visaCompany')}</label><input id="visaCompany" placeholder="e.g., ABC Engineering Ltd."></div><div class="input-group"><label>${t('visaProject')}</label><input id="visaProject"></div><div class="input-group"><label>${t('visaApplicant')}</label><input id="visaApplicant"></div><div class="input-group"><label>${t('visaDate')}</label><input type="date" id="visaDate" value="${new Date().toISOString().split('T')[0]}"></div><div class="input-group"><label>${t('visaContent')}</label><textarea id="visaContent" rows="4"></textarea></div><div class="input-group"><label>${t('visaRemarks')}</label><textarea id="visaRemarks" rows="2"></textarea></div><button class="small-btn" id="syncToVisaBtn">${t('syncBtn')}</button><button class="action-btn" id="exportVisaPdf">${isPro ? t('visaGenerateBtn') : t('proFeatureRequired')}</button>${!isPro ? `<div style="margin-top:10px;font-size:12px;color:#ffd700;text-align:center;">⭐ ${t('proFeatureRequired')}</div>` : ''}</div>`;
         }
         let historyPanel = document.getElementById('historyPanel');
         if(historyPanel) {
-            historyPanel.innerHTML = `<div class="calc-card"><div id="historyTitle">${t('historyTitle')}</div><div id="historyList"></div><div class="pro-banner">${t('proMsg')}</div></div>`;
+            historyPanel.innerHTML = `<div class="calc-card pro-function"><div id="historyTitle">${t('historyTitle')}</div><div id="historyList"></div><div class="pro-banner">${t('proMsg')}</div></div>`;
         }
+        
         const pipeData = [{dn:"DN15",od:21.3,thick:2.8,weight:1.28},{dn:"DN20",od:26.9,thick:2.8,weight:1.66},{dn:"DN25",od:33.7,thick:3.2,weight:2.41},{dn:"DN50",od:60.3,thick:3.8,weight:5.29},{dn:"DN100",od:114.3,thick:4.5,weight:12.18}];
         const pipeTable = document.getElementById('pipeThickTable');
-        if(pipeTable) pipeTable.innerHTML = pipeData.map(p => `<tr>.html${p.dn}</td>.html${p.od}</td>.html${p.thick}</td>.html${p.weight}</td></tr>`).join('');
+        if(pipeTable) pipeTable.innerHTML = pipeData.map(p => `<tr>.html${p.dn}</td>.html${p.od}</td>.html${p.thick}</td>.html${p.weight}</td><tr>`).join('');
+        
         const ansiTable = document.getElementById('ansiPipeTable');
         const premiumSection = document.getElementById('premiumSteelSection');
         if(ansiTable && premiumSection) {
             if(isPro) {
                 const ansiData = [{nps:"1/2",od:21.3,sch40:2.77,sch80:3.73},{nps:"1",od:33.4,sch40:3.38,sch80:4.55},{nps:"2",od:60.3,sch40:3.91,sch80:5.54},{nps:"4",od:114.3,sch40:6.02,sch80:8.56},{nps:"6",od:168.3,sch40:7.11,sch80:10.97}];
-                ansiTable.innerHTML = ansiData.map(p => `<td>.html${p.nps}</td>.html${p.od}</td>.html${p.sch40}</td>.html${p.sch80}</td></tr>`).join('');
+                ansiTable.innerHTML = ansiData.map(p => `<tr>.html${p.nps}</td>.html${p.od}</td>.html${p.sch40}<td>.html${p.sch80}</td></tr>`).join('');
                 premiumSection.innerHTML = `<div class="input-group"><label>${t('hbeamLabel')}</label><input id="hbeamSpec" placeholder="200x200x8"></div><button class="small-btn" id="calcHbeam">${t('hbeamBtn')}</button><div class="result-box" id="hbeamResult">--</div>`;
                 document.getElementById('calcHbeam')?.addEventListener('click', () => {
                     let sp = document.getElementById('hbeamSpec')?.value || "200x200x8";
@@ -1130,14 +990,16 @@
                     addHistory(`H-Beam: ${w}kg/m`);
                 });
             } else {
-                ansiTable.innerHTML = `<tr><td colspan="4" style="text-align:center;">⭐ ${t('upgradeToPro')} to access ANSI data</td></td>`;
+                ansiTable.innerHTML = `<tr><td colspan="4" style="text-align:center;">⭐ ${t('upgradeToPro')} to access ANSI data</td><tr>`;
                 premiumSection.innerHTML = `<div class="pro-locked" style="padding:16px;text-align:center">🔒 ${t('steelPremiumTitle')}</div>`;
             }
         }
+        
         document.getElementById('exportConvPdf')?.addEventListener('click', () => exportGeneric("Convert", lastCalcText, "convert.pdf"));
         document.getElementById('exportPipePdf')?.addEventListener('click', () => exportGeneric("Pipe", document.getElementById('pipeAreaResult')?.innerText || "", "pipe.pdf"));
         document.getElementById('exportCivilPdf')?.addEventListener('click', () => exportGeneric("Civil", document.getElementById('civilResult')?.innerText || "", "civil.pdf"));
         document.getElementById('exportCablePdf')?.addEventListener('click', () => exportGeneric("Cable", document.getElementById('cableResult')?.innerText || "", "cable.pdf"));
+        
         const exportVisaBtn = document.getElementById('exportVisaPdf');
         if(exportVisaBtn) {
             if(isPro) {
@@ -1151,6 +1013,7 @@
                 exportVisaBtn.innerHTML = t('proFeatureRequired');
             }
         }
+        
         document.getElementById('syncCableBtn')?.addEventListener('click', updateCable);
         document.getElementById('calcDiamBtn')?.addEventListener('click', calcDiamArea);
         document.getElementById('calcBoltBtn')?.addEventListener('click', calcBolt);
@@ -1168,6 +1031,7 @@
         document.getElementById('convVal')?.addEventListener('input', convertUnit);
         document.getElementById('srcUnit')?.addEventListener('change', convertUnit);
         document.getElementById('dstUnit')?.addEventListener('change', convertUnit);
+        
         const unitGroup = document.getElementById('unitTypeGroup');
         if(unitGroup) {
             const types = ['length','weight','area','volume','temperature','flow','pipe','steel'];
@@ -1182,6 +1046,7 @@
                 });
             });
         }
+        
         const civilGroup = document.getElementById('civilTypeGroup');
         if(civilGroup) {
             const types = ['area','wall','concrete','earth'];
@@ -1196,6 +1061,7 @@
                 });
             });
         }
+        
         renderUnits();
     }
     
@@ -1265,6 +1131,116 @@
                 }
             }
         });
+    }
+})();
+</script>
+
+<!-- ========== 权限加固代码 ========== -->
+<script>
+(function(){
+    function isProUser() {
+        try {
+            const proTier = localStorage.getItem('engicalc_pro_tier');
+            if (proTier === 'pro') return true;
+            return false;
+        } catch(e) { return false; }
+    }
+    
+    function getCurrentLang() {
+        try {
+            const langSelect = document.getElementById('langSelector');
+            if (langSelect && langSelect.value) return langSelect.value;
+        } catch(e) {}
+        return 'zh';
+    }
+    
+    function showUpgradeAlert() {
+        const lang = getCurrentLang();
+        const title = lang === 'zh' ? '⚠️ 专业版功能' : '⚠️ PRO Feature';
+        const message = lang === 'zh' 
+            ? '此功能需要升级专业版才能使用。\n\n点击「购买专业版」解锁全部功能。\n\n💰 一次性支付 $4.99，永久使用。'
+            : 'This feature requires PRO version.\n\nClick "BUY PRO" to unlock all features.\n\n💰 One-time payment $4.99, lifetime access.';
+        
+        const upgradeBtn = document.getElementById('upgradeBtn');
+        if (upgradeBtn) {
+            upgradeBtn.style.animation = 'pulse 0.5s ease 3';
+            setTimeout(() => { if (upgradeBtn.style) upgradeBtn.style.animation = ''; }, 1500);
+        }
+        
+        alert(title + '\n\n' + message);
+    }
+    
+    function disableProFunctions() {
+        if (isProUser()) return;
+        
+        const proElements = document.querySelectorAll('.pro-function');
+        proElements.forEach(function(el) {
+            if (el.hasAttribute('data-pro-locked')) return;
+            el.setAttribute('data-pro-locked', 'true');
+            
+            el.style.cursor = 'pointer';
+            
+            if (el.tagName === 'BUTTON' || el.classList.contains('action-btn') || el.classList.contains('small-btn')) {
+                el.style.opacity = '0.6';
+                el.style.filter = 'grayscale(0.2)';
+            }
+            
+            if (!el.querySelector('.pro-lock-icon')) {
+                const lockSpan = document.createElement('span');
+                lockSpan.className = 'pro-lock-icon';
+                lockSpan.innerHTML = ' 🔒';
+                lockSpan.style.fontSize = '12px';
+                lockSpan.style.opacity = '0.7';
+                el.appendChild(lockSpan);
+            }
+            
+            el.addEventListener('click', function(e) {
+                if (!isProUser()) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    showUpgradeAlert();
+                    return false;
+                }
+            }, true);
+        });
+    }
+    
+    function observeDOMForProFunctions() {
+        const observer = new MutationObserver(function(mutations) {
+            let shouldCheck = false;
+            mutations.forEach(function(mutation) {
+                if (mutation.addedNodes && mutation.addedNodes.length > 0) {
+                    shouldCheck = true;
+                }
+            });
+            if (shouldCheck) {
+                setTimeout(disableProFunctions, 100);
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+    
+    let lastProStatus = isProUser();
+    function watchProStatus() {
+        const currentStatus = isProUser();
+        if (currentStatus !== lastProStatus) {
+            lastProStatus = currentStatus;
+            disableProFunctions();
+        }
+        setTimeout(watchProStatus, 3000);
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            disableProFunctions();
+            observeDOMForProFunctions();
+            setTimeout(watchProStatus, 1000);
+        });
+    } else {
+        disableProFunctions();
+        observeDOMForProFunctions();
+        setTimeout(watchProStatus, 1000);
     }
 })();
 </script>
